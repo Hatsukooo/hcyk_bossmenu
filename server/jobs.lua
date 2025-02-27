@@ -25,6 +25,7 @@ function GetEmployees(job)
     local result = {}
     local success = false
     
+    -- First attempt - With proper collation
     local query1 = [[
         SELECT 
             u.identifier, 
@@ -48,10 +49,12 @@ function GetEmployees(job)
         return MySQL.Sync.fetchAll(query1, { job })
     end)
     
-    if success and result then
+    if success and result and #result > 0 then
+        print("[HCYK_BOSSACTIONS] First query successful, found " .. #result .. " employees")
         return result
     end
     
+    -- Second attempt - Without collation specifics
     local query2 = [[
         SELECT 
             u.identifier, 
@@ -75,20 +78,23 @@ function GetEmployees(job)
         return MySQL.Sync.fetchAll(query2, { job, job })
     end)
     
-    if success and result then
+    if success and result and #result > 0 then
+        print("[HCYK_BOSSACTIONS] Second query successful, found " .. #result .. " employees")
         return result
     end
     
-    success, result = pcall(function()
+    -- Third attempt - Two separate queries for maximum compatibility
+    local employees = {}
+    success, employees = pcall(function()
         local users = MySQL.Sync.fetchAll("SELECT identifier, firstname, lastname, job_grade FROM users WHERE job = ?", { job })
-        local employees = {}
+        local employeesList = {}
         
         for _, user in ipairs(users) do
             local gradeInfo = MySQL.Sync.fetchAll("SELECT grade, name AS grade_name, label AS grade_label, salary FROM job_grades WHERE job_name = ? AND grade = ?", 
                 { job, user.job_grade })
                 
             if gradeInfo and gradeInfo[1] then
-                table.insert(employees, {
+                table.insert(employeesList, {
                     identifier = user.identifier,
                     firstname = user.firstname,
                     lastname = user.lastname,
@@ -100,14 +106,20 @@ function GetEmployees(job)
             end
         end
         
-        table.sort(employees, function(a, b)
+        table.sort(employeesList, function(a, b)
             return a.grade > b.grade
         end)
         
-        return employees
+        return employeesList
     end)
     
-    return success and result or {}
+    if success and employees and #employees > 0 then
+        print("[HCYK_BOSSACTIONS] Third query successful, found " .. #employees .. " employees")
+        return employees
+    end
+    
+    print("[HCYK_BOSSACTIONS] All queries failed, returning empty employee list")
+    return {}
 end
 
 local function handleAsyncCallback(cb, success, message)

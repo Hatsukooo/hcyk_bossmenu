@@ -44,18 +44,6 @@ lib.callback.register('hcyk_bossactions:getJobData', function(source, job)
     return jobData
 end)
 
-lib.callback.register('hcyk_bossactions:getEmployees', function(source, job)
-    if not checkBossPermissions(source, job) then
-        debugLog("getEmployees: Permission denied for player", source)
-        return {}
-    end
-    
-    local employees = GetEmployees(job)
-    debugLog("getEmployees: Found", #employees, "employees for job", job)
-    
-    return employees
-end)
-
 lib.callback.register('hcyk_bossactions:getNearbyPlayers', function(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
     
@@ -127,85 +115,21 @@ function CalculatePerformance(identifier)
 end
 
 lib.callback.register('hcyk_bossactions:getEmployees', function(source, job)
-    local result = {}
-    local success = false
-    
-    if success and result then
-        for i, employee in ipairs(result) do
-            employee.performance = CalculatePerformance(employee.identifier)
-        end
-        return result
-    end
-    
-    if success and result then
-        for i, employee in ipairs(result) do
-            employee.performance = CalculatePerformance(employee.identifier)
-        end
-        return result
-    end
-    
-    return {}
-end)
-local playerSessions = {}
-
-lib.callback.register('hcyk_bossactions:getEmployeePlaytime', function(source, job, identifier)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not checkBossPermissions(source, job) then
+        debugLog("getEmployees: Permission denied for player", source)
         return {}
     end
     
-    local currentTime = os.time()
-    local currentDate = os.date("*t", currentTime)
-    local dayOfWeek = currentDate.wday - 1
-    if dayOfWeek == 0 then dayOfWeek = 7 end
-    
-    local secondsToSubtract = (dayOfWeek - 1) * 86400 + currentDate.hour * 3600 + currentDate.min * 60 + currentDate.sec
-    local weekStartTime = currentTime - secondsToSubtract
-    
-    local result = {}
-    local daysOfWeek = {"Po", "Út", "St", "Čt", "Pá", "So", "Ne"}
-    
-    for i=1, 7 do
-        result[i] = {
-            day = daysOfWeek[i],
-            hours = 0,
-            performance = 0
-        }
+    local employees = GetEmployees(job)
+    debugLog("getEmployees: Found", #employees, "employees for job", job)
+    for i, employee in ipairs(employees) do
+        employee.performance = CalculatePerformance(employee.identifier)
     end
     
-    local success, playtimeData = pcall(function()
-        return MySQL.Sync.fetchAll(
-            "SELECT DATE_FORMAT(FROM_UNIXTIME(timestamp), '%w') as day_of_week, " ..
-            "SUM(duration) / 3600 as hours " ..
-            "FROM player_playtime " ..
-            "WHERE identifier = ? AND timestamp >= ? " ..
-            "GROUP BY day_of_week", 
-            {identifier, weekStartTime}
-        )
-    end)
-    
-    if success and playtimeData then
-        for _, dayData in ipairs(playtimeData) do
-            local dayIndex = tonumber(dayData.day_of_week)
-            
-            if dayIndex == 0 then dayIndex = 7 end
-            
-            local hours = tonumber(dayData.hours) or 0
-            result[dayIndex].hours = math.floor(hours * 10) / 10
-
-            result[dayIndex].performance = math.floor((hours / 2) * 0.57 * 100)
-            result[dayIndex].performance = math.min(100, math.max(0, result[dayIndex].performance))
-        end
-    end
-    
-    local resultArray = {}
-    for i=1, 7 do
-        table.insert(resultArray, result[i])
-    end
-    
-    return resultArray
+    return employees
 end)
+
+local playerSessions = {}
 
 AddEventHandler('playerJoining', function()
     local src = source

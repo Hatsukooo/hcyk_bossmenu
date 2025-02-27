@@ -61,7 +61,7 @@ end)
 RegisterNUICallback('getEmployees', function(data, cb)
     debugPrint('Fetching employees for job', data.job)
     
-    lib.callback('hcyk_bossactions:getEmployees', 1000, function(employees)
+    lib.callback('hcyk_bossactions:getEmployees', false, function(employees)
         if employees then
             debugPrint('Received', #employees, 'employees')
             cb(employees)
