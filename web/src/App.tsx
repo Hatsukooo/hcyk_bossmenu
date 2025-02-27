@@ -6,7 +6,7 @@ import EmployeesTab from "./components/EmployeesTab";
 import HireTab from "./components/HireTab";
 import FireTab from "./components/FireTab";
 import FinancesTab from "./components/FinancesTab";
-import RanksManagementTab from "./components/RanksManagementTab";
+import FactionManagementTab from "./components/FactionManagementTab";
 
 // Import stylesheets
 import "./styles/App.css";
@@ -17,7 +17,7 @@ import "./styles/Hire.css";
 import "./styles/EmployeeDetail.css";
 import "./styles/Notification.css";
 import "./styles/Dialog.css";
-import "./styles/Ranks.css";
+import "./styles/FactionManagement.css";
 
 debugData([
   {
@@ -33,7 +33,6 @@ const App: React.FC = () => {
   const handleClose = () => {
     setIsMenuOpen(false);
     
-    // Vylepšený error handling pro fetch požadavek
     fetch(`https://hcyk_bossmenu/hideUI`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,7 +49,6 @@ const App: React.FC = () => {
     })
     .catch(err => {
       console.error('Error closing UI:', err);
-      // Přidáno jako fallback - pokud fetch selže, alespoň se pokusit poslat zprávu znovu
       setTimeout(() => {
         fetch(`https://hcyk_bossmenu/hideUI`, {
           method: 'POST',
@@ -69,7 +67,6 @@ const App: React.FC = () => {
         e.preventDefault();
       }
       
-      // Přidaný ESC handler
       if (e.key === 'Escape') {
         handleClose();
       }
@@ -82,7 +79,6 @@ const App: React.FC = () => {
     };
   }, []);
   
-  // Přidáno naslouchání pro NUI zprávy
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const data = event.data;
@@ -110,7 +106,7 @@ const App: React.FC = () => {
       case "finances":
         return <FinancesTab />;
       case "ranks":
-        return <RanksManagementTab />;
+        return <FactionManagementTab />;
       default:
         return <EmployeesTab />;
     }
@@ -183,7 +179,7 @@ const App: React.FC = () => {
                           setActiveTab("ranks");
                         }}
                       >
-                        Hodnosti
+                        Správa frakce
                       </a>
                     </li>
                   </ul>

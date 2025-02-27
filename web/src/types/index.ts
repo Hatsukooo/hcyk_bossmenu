@@ -34,6 +34,22 @@ export interface JobData {
   name: string;
   label: string;
   grades: JobGrade[];
+  color?: string;
+  description?: string;
+  maxMembers?: number;
+  hideFromPublic?: boolean;
+}
+
+// Interface for job permissions
+export interface JobPermission {
+  name: string;
+  grades: number[];
+}
+
+export interface JobPermissions {
+  [key: string]: {
+    grades: number[];
+  };
 }
 
 export interface JobGrade {
