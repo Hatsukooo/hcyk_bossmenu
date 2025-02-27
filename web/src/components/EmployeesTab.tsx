@@ -3,8 +3,8 @@ import { Employee, EmployeeHistory, EmployeeActivities, EmployeeBackend } from '
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
+import PlaytimeChart from './charts/PlaytimeChart';
 
-// Mock data histories (will be replaced with real data when available)
 const employeeHistory: EmployeeHistory = {
   1: [
     { date: '15.1.2025', type: 'Prémie', amount: '+$200', note: 'Splnění kvartálního cíle' },
@@ -22,7 +22,6 @@ const employeeHistory: EmployeeHistory = {
   ]
 };
 
-// Mock data activities
 const employeeActivities: EmployeeActivities = {
   1: [
     { date: '25.1.2025', activity: 'Přítomen', hours: 8 },
@@ -48,7 +47,6 @@ const employeeActivities: EmployeeActivities = {
 };
 
 const EmployeesTab: React.FC = () => {
-  // States
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -66,7 +64,6 @@ const EmployeesTab: React.FC = () => {
   const { showNotification } = useNotification();
   const { showDialog } = useDialog();
 
-  // Fetch employees from backend
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -77,7 +74,7 @@ const EmployeesTab: React.FC = () => {
         const data = await fetchWithFallback<EmployeeBackend[]>(
           'getEmployees', 
           { job }, 
-          true // Use mock data if fetch fails (for development)
+          true 
         );
        
         if (!data || data.length === 0) {
@@ -85,13 +82,12 @@ const EmployeesTab: React.FC = () => {
           return;
         }
        
-        // Transform backend data to frontend Employee type
         const formattedEmployees: Employee[] = data.map(emp => ({
           id: Number(emp.identifier), 
           name: `${emp.firstname} ${emp.lastname}`,
           role: emp.grade_name,
           salary: emp.salary || 0,
-          performance: 75, // Placeholder, integrate real performance tracking later
+          performance: emp.performance || 75,
           level: emp.grade
         }));
        
@@ -107,18 +103,16 @@ const EmployeesTab: React.FC = () => {
     fetchEmployees();
   }, []); 
   
-  // When a employee is selected, set the form data
   useEffect(() => {
     if (selectedEmployee) {
       setFormData({
         role: selectedEmployee.role,
         salary: selectedEmployee.salary,
-        note: '' // You might want to fetch this from somewhere
+        note: '' 
       });
     }
   }, [selectedEmployee]);
   
-  // Handler for form changes
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -128,7 +122,6 @@ const EmployeesTab: React.FC = () => {
     setFormChanged(true);
   };
   
-  // Handler for modal close with check for unsaved changes
   const handleCloseModal = () => {
     if (formChanged) {
       showDialog({
@@ -144,7 +137,6 @@ const EmployeesTab: React.FC = () => {
     }
   };
   
-  // Handler for saving changes
   const handleSaveChanges = async () => {
     if (!selectedEmployee) return;
   
@@ -161,7 +153,6 @@ const EmployeesTab: React.FC = () => {
       );
 
       if (response.success) {
-        // Update local state
         setEmployees(prev => prev.map(emp => 
           emp.id === selectedEmployee.id 
             ? {...emp, role: formData.role, salary: formData.salary} 
@@ -179,34 +170,33 @@ const EmployeesTab: React.FC = () => {
     }
   };
   
-  // Handlers
   const handleOpenDetail = (employee: Employee) => {
     setSelectedEmployee(employee);
     setActiveTab("historie");
     setShowDetailModal(true);
   };
   
-  // Filter employees based on search term and role filter
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === '' || emp.role === roleFilter;
     return matchesSearch && matchesRole;
   });
   
-  // Get unique roles for filter dropdown
   const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
   
-  // Render loading state
   if (loading) return <div>Načítání zaměstnanců...</div>;
 
-  // Render error state
   if (error) return <div className="error-message">{error}</div>;
 
+  const getHoursFromPerformance = (performance: number): number => {
+    const estimatedHours = ((performance / 0.57) * 2).toFixed(1);
+    return parseFloat(estimatedHours);
+  };
+  
   return (
     <div className="tab-content">
       <h2>Zaměstnanci</h2>
       
-      {/* Filtr a vyhledávání */}
       <div className="filter-controls">
         <input 
           type="text" 
@@ -234,9 +224,10 @@ const EmployeesTab: React.FC = () => {
               <div className="employee-header">
                 <h3>{emp.name}</h3>
                 <div className="performance-indicator" 
-                     style={{backgroundColor: emp.performance > 80 ? '#4cd964' : 
-                                              emp.performance > 60 ? '#ffcc00' : '#ff3b30'}}>
-                  {emp.performance}%
+                    title={`Výkon založen na týdenním odehraném čase (${getHoursFromPerformance(emp.performance)} hodin)`}
+                    style={{backgroundColor: emp.performance > 80 ? '#4cd964' : 
+                                             emp.performance > 60 ? '#ffcc00' : '#ff3b30'}}>
+                    {emp.performance}%
                 </div>
               </div>
               <p>Pozice: {emp.role}</p>
@@ -249,7 +240,6 @@ const EmployeesTab: React.FC = () => {
         ))}
       </div>
       
-      {/* Modální okno s detaily zaměstnance */}
       {showDetailModal && selectedEmployee && (
         <div className="modal-overlay">
           <div className="employee-detail-modal">
@@ -276,6 +266,7 @@ const EmployeesTab: React.FC = () => {
                                           selectedEmployee.performance > 60 ? '#ffcc00' : '#ff3b30'}}>
                         {selectedEmployee.performance}%
                       </span>
+                      <span className="stat-detail">~{getHoursFromPerformance(selectedEmployee.performance)} hodin týdně</span>
                     </div>
                   </div>
                 </div>
@@ -294,6 +285,12 @@ const EmployeesTab: React.FC = () => {
                     onClick={() => setActiveTab("aktivita")}
                   >
                     Aktivita
+                  </button>
+                  <button 
+                      className={`tab-button ${activeTab === "playtime" ? "active" : ""}`}
+                      onClick={() => setActiveTab("playtime")}
+                  >
+                    Odehraný čas
                   </button>
                   <button 
                     className={`tab-button ${activeTab === "poznamky" ? "active" : ""}`}
@@ -373,7 +370,36 @@ const EmployeesTab: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+                  {activeTab === "playtime" && (
+                    <div className="playtime-content">
+                      <div className="playtime-overview">
+                        <h4>Analýza odehraného času</h4>
+                        <p>Výkon zaměstnance ({selectedEmployee.performance}%) je vypočítán z týdenního odehraného času.</p>
+                                    
+                        <div className="performance-explanation">
+                          <div className="performance-scale">
+                            <div className="scale-segment bad">
+                              <span>0-60%</span>
+                            </div>
+                            <div className="scale-segment average">
+                              <span>61-80%</span>
+                            </div>
+                            <div className="scale-segment good">
+                              <span>81-100%</span>
+                            </div>
+                          </div>
+                          <div className="performance-hours">
+                            <span>0h</span>
+                            <span>20h</span>
+                            <span>35h+</span>
+                          </div>
+                          <p className="scale-info">Hodnocení je určeno na základě přibližně 35 hodin týdně (100%).</p>
+                        </div>
+                                    
+                        <PlaytimeChart employeeId={selectedEmployee.id.toString()} />
+                      </div>
+                    </div>
+                  )}
                   {activeTab === "poznamky" && (
                     <div className="notes-content">
                       <p>Zde budou zobrazeny poznámky a další informace o zaměstnanci...</p>

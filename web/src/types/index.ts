@@ -93,6 +93,12 @@ export interface Player {
   name: string;
 }
 
+export interface PlaytimeData {
+  day: string;
+  hours: number;
+  performance: number;
+}
+
 export interface EmployeeBackend {
   identifier: string;
   firstname: string;
@@ -101,6 +107,7 @@ export interface EmployeeBackend {
   grade_name: string;
   grade_label?: string;
   salary?: number;
+  performance?: number;
 }
 
 declare global {
@@ -135,6 +142,6 @@ export function convertBackendToEmployee(emp: EmployeeBackend): Employee {
     role: emp.grade_name,
     salary: emp.salary || 0,
     level: emp.grade,
-    performance: 75
+    performance: emp.performance || 75 
   };
 }
