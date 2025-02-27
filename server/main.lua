@@ -222,7 +222,7 @@ AddEventHandler('playerDropped', function()
     local src = source
     if playerSessions[src] then
         local duration = os.time() - playerSessions[src].startTime
-        if duration > 60 IsEntityTouchingEntity
+        if duration > 60 then
             MySQL.Async.execute('INSERT INTO player_playtime (identifier, timestamp, duration) VALUES (?, ?, ?)',
                 {playerSessions[src].identifier, playerSessions[src].startTime, duration})
         end
