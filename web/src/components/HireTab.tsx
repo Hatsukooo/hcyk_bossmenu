@@ -1,0 +1,232 @@
+import React, { useState, useEffect } from 'react';
+import { useNotification } from '../context/NotificationContext';
+import { fetchWithFallback, getFallbackJob } from '../utils/api';
+
+// Definice typů
+interface NearbyPlayer {
+  id: number;
+  name: string;
+}
+
+interface JobGrade {
+  grade: number;
+  name: string;
+  label: string;
+  salary: number;
+}
+
+const HireTab: React.FC = () => {
+  // State
+  const [nearbyPlayers, setNearbyPlayers] = useState<NearbyPlayer[]>([]);
+  const [jobGrades, setJobGrades] = useState<JobGrade[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingGrades, setLoadingGrades] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [selectedPosition, setSelectedPosition] = useState<string>("");
+  const [additionalInfo, setAdditionalInfo] = useState<string>("");
+  const { showNotification } = useNotification();
+
+  // Fetch nearby players when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const job = getFallbackJob();
+        
+        // Fetch nearby players
+        const playersData = await fetch('https://hcyk_bossmenu/getNearbyPlayers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job })
+        })
+        .then(response => response.text())
+        .then(text => {
+          try {
+            return text ? JSON.parse(text) : [];
+          } catch (e) {
+            console.error('Failed to parse nearby players response:', text);
+            return [];
+          }
+        });
+        
+        setNearbyPlayers(Array.isArray(playersData) ? playersData : []);
+        
+        // Fetch job grades (ranks)
+        setLoadingGrades(true);
+        const ranks = await fetch('https://hcyk_bossmenu/getRanks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job })
+        })
+        .then(response => response.text())
+        .then(text => {
+          try {
+            return text ? JSON.parse(text) : [];
+          } catch (e) {
+            console.error('Failed to parse ranks response:', text);
+            return [];
+          }
+        });
+        
+        // Sort ranks by grade
+        const sortedRanks = Array.isArray(ranks) 
+          ? ranks.sort((a, b) => a.grade - b.grade)
+          : [];
+          
+        setJobGrades(sortedRanks);
+      } catch (err) {
+        console.error('Chyba při načítání dat:', err);
+        setError('Chyba při komunikaci se serverem');
+      } finally {
+        setLoading(false);
+        setLoadingGrades(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedPlayer || !selectedPosition) {
+      showNotification('error', 'Vyberte hráče a pozici');
+      return;
+    }
+    
+    try {
+      // Find the grade number for the selected position
+      const selectedGrade = jobGrades.find(grade => grade.name === selectedPosition);
+      if (!selectedGrade) {
+        showNotification('error', 'Vybraná pozice není platná');
+        return;
+      }
+      
+      const response = await fetch('https://hcyk_bossmenu/hireEmployee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          player: selectedPlayer,
+          job: getFallbackJob(),
+          position: selectedGrade.grade, // Send grade number instead of name
+          additionalInfo,
+          salary: selectedGrade.salary
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showNotification('success', 'Zaměstnanec byl úspěšně přijat');
+        // Reset form
+        setSelectedPlayer("");
+        setSelectedPosition("");
+        setAdditionalInfo("");
+      } else {
+        showNotification('error', result.message || 'Nepodařilo se přijmout zaměstnance');
+      }
+    } catch (err) {
+      console.error('Chyba při přijímání zaměstnance:', err);
+      showNotification('error', 'Nastala chyba při přijímání zaměstnance');
+    }
+  };
+  
+  const getCurrentSalary = () => {
+    const position = jobGrades.find(grade => grade.name === selectedPosition);
+    return position ? position.salary : 0;
+  };
+  
+  if (loading && loadingGrades) return <div>Načítání dat...</div>;
+  if (error) return <div className="error-message">{error}</div>;
+
+  return (
+    <div className="tab-content">
+      <h2>Zaměstnat</h2>
+      
+      <div className="hire-form-container">
+        <form onSubmit={handleSubmit} className="hire-form">
+          <div className="form-group">
+            <label htmlFor="player">Vyberte hráče:</label>
+            <select 
+              id="player"
+              value={selectedPlayer}
+              onChange={(e) => setSelectedPlayer(e.target.value)}
+              required
+            >
+              <option value="">-- Vyberte hráče --</option>
+              {nearbyPlayers.length > 0 ? (
+                nearbyPlayers.map(player => (
+                  <option key={player.id} value={player.id}>{player.name}</option>
+                ))
+              ) : (
+                <option value="" disabled>Žádní hráči v okolí</option>
+              )}
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="position">Vyberte pozici:</label>
+            <select 
+              id="position"
+              value={selectedPosition}
+              onChange={(e) => setSelectedPosition(e.target.value)}
+              required
+              disabled={loadingGrades}
+            >
+              <option value="">-- Vyberte pozici --</option>
+              {jobGrades.length > 0 ? (
+                jobGrades.map(grade => (
+                  <option key={grade.grade} value={grade.name}>
+                    {grade.label} - ${grade.salary}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Žádné pozice nenalezeny</option>
+              )}
+            </select>
+          </div>
+          
+          {selectedPosition && (
+            <div className="salary-preview">
+              <p>Celkový plat: <span className="salary-amount">${getCurrentSalary()}</span></p>
+            </div>
+          )}
+          
+          <div className="form-group">
+            <label htmlFor="additional">Dodatečné informace:</label>
+            <textarea 
+              id="additional"
+              value={additionalInfo}
+              onChange={(e) => setAdditionalInfo(e.target.value)}
+              placeholder="Discord ID, poznámky..."
+            />
+          </div>
+          
+          <div className="form-actions">
+            <button 
+              type="submit" 
+              className="action-btn"
+              disabled={!selectedPlayer || !selectedPosition}
+            >
+              Zaměstnat
+            </button>
+            <button 
+              type="button" 
+              className="cancel-btn"
+              onClick={() => {
+                setSelectedPlayer("");
+                setSelectedPosition("");
+                setAdditionalInfo("");
+              }}
+            >
+              Resetovat
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default HireTab;

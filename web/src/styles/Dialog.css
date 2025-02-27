@@ -1,0 +1,86 @@
+/* src/styles/Dialog.css */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+  
+  .dialog-container {
+    background-color: #282c34;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    animation: dialogFadeIn 0.3s ease;
+  }
+  
+  @keyframes dialogFadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .dialog-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #3d4149;
+  }
+  
+  .dialog-header h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 18px;
+  }
+  
+  .dialog-info .dialog-header {
+    border-left: 4px solid #4a90e2;
+  }
+  
+  .dialog-warning .dialog-header {
+    border-left: 4px solid #ffcc00;
+  }
+  
+  .dialog-danger .dialog-header {
+    border-left: 4px solid #ff3b30;
+  }
+  
+  .dialog-content {
+    padding: 20px;
+  }
+  
+  .dialog-content p {
+    margin: 0;
+    color: #d6d6d6;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  .dialog-actions {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #3d4149;
+  }
+  
+  .dialog-button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }

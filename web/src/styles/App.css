@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Oswald', sans-serif;
+}
+
+body {
+  font-family: 'Oswald', sans-serif;
+}
+
+.nui-wrapper {
+  text-align: center;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* background-color: rgba(23, 26, 31, 0.8); */
+  font-family: 'Oswald', sans-serif;
+}
+
+.popup-thing {
+  background: #282c34;
+  border-radius: 15px;
+  width: 900px;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Header styling */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border-bottom: 2px solid #d6d6d6;
+  padding: 20px 30px;
+  background-color: #1c1f25;
+}
+
+.popup-header h1 {
+  font-size: 28px;
+  color: #d6d6d6;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.navbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+}
+
+.navbar ul {
+  display: flex;
+  list-style: none;
+  gap: 30px;
+}
+
+.navbar li {
+  position: relative;
+}
+
+.navbar a {
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 400;
+  padding: 5px 0;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.navbar a:hover, .navbar a.active {
+  color: #d6d6d6;
+  border-bottom: 3px solid #d6d6d6;
+}
+
+.exit-btn {
+  border: 1px solid #d6d6d6;
+  color: rgba(20, 21, 30, 0.85);
+  width: 36px;
+  height: 36px;
+  border-radius: 25%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.exit-btn span {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.exit-btn:hover {
+  background-color: #fff;
+  color: rgba(20, 21, 30, 0.85);
+}
+
+/* Content area */
+.content-area {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content h2 {
+  font-size: 24px;
+  margin-bottom: 25px;
+  text-transform: uppercase;
+  color: #d6d6d6;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-align: left;
+  border-left: 4px solid #d6d6d6;
+  padding-left: 15px;
+}
+
+/* Button styling */
+button {
+  font-family: 'Oswald', sans-serif;
+  background-color: #d6d6d6;
+  border: 1px solid #d6d6d6;
+  color: rgba(20, 21, 30, 0.85);
+  font-size: 16px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+button:hover {
+  background-color: #fff;
+  color: rgba(20, 21, 30, 0.85);
+}
+
+.action-btn {
+  background-color: #4a90e2;
+  color: white;
+  border: 1px solid #4a90e2;
+}
+
+.action-btn:hover {
+  background-color: #357ac7;
+  color: white;
+  border: 1px solid #357ac7;
+}
+
+.danger-btn {
+  background-color: #e24a4a;
+  color: white;
+  border: 1px solid #e24a4a;
+}
+
+.danger-btn:hover {
+  background-color: #c73535;
+  color: white;
+  border: 1px solid #c73535;
+}
+
+.cancel-btn {
+  background-color: #888;
+  color: white;
+  border: 1px solid #888;
+}
+
+.cancel-btn:hover {
+  background-color: #666;
+  color: white;
+  border: 1px solid #666;
+}
+
+/* Numeric input styling */
+input[type="number"] {
+  /* Remove spinner buttons */
+  -moz-appearance: textfield;
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #4a5568;
+  background-color: #2d3748;
+  color: #fff;
+  font-size: 16px;
+  font-family: 'Oswald', sans-serif;
+}
+
+/* Remove spinner buttons in WebKit browsers */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.number-input {
+  width: 100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1c1f25;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d6d6d6;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
