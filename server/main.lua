@@ -1,5 +1,3 @@
-ESX = exports["es_extended"]:getSharedObject()
-
 local function logError(message, ...)
     local args = {...}
     local formatted = string.format(message, table.unpack(args))

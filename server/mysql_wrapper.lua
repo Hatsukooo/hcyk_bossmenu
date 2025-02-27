@@ -1,4 +1,5 @@
--- Wrapper functions for safer MySQL operations
+ESX = exports["es_extended"]:getSharedObject()
+
 SafeMySQL = {}
 
 -- Log function with optional debug flag
