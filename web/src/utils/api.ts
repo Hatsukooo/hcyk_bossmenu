@@ -47,6 +47,19 @@ export const getFallbackJob = (): string => {
 };
 
 /**
+ * Helper to ensure job parameter is always a string
+ */
+export const ensureJobString = (job: any): string => {
+  if (typeof job === 'string') {
+    return job;
+  }
+  if (typeof job === 'object' && job !== null && job.name) {
+    return job.name;
+  }
+  return getFallbackJob();
+};
+
+/**
  * Mock data function for development when backend is not available
  * @param endpoint The endpoint that was called
  * @param data The data that was sent
@@ -56,9 +69,9 @@ export const getMockData = (endpoint: string, data: any): any => {
   switch (endpoint) {
     case 'getEmployees':
       return [
-        { identifier: '1', firstname: 'John', lastname: 'Doe', grade: 3, grade_name: 'boss', salary: 5000, performance: 85 },
-        { identifier: '2', firstname: 'Jane', lastname: 'Smith', grade: 2, grade_name: 'deputy', salary: 4000, performance: 72 },
-        { identifier: '3', firstname: 'Mike', lastname: 'Johnson', grade: 1, grade_name: 'officer', salary: 3000, performance: 65 }
+        { identifier: '1', firstname: 'John', lastname: 'Doe', grade: 3, grade_name: 'boss', salary: 5000 },
+        { identifier: '2', firstname: 'Jane', lastname: 'Smith', grade: 2, grade_name: 'deputy', salary: 4000 },
+        { identifier: '3', firstname: 'Mike', lastname: 'Johnson', grade: 1, grade_name: 'officer', salary: 3000 }
       ];
     case 'getSocietyMoney':
       return 250000;
@@ -81,41 +94,23 @@ export const getMockData = (endpoint: string, data: any): any => {
         { id: 3, job_name: data.job, grade: 2, name: 'deputy', label: 'Zástupce', salary: 4000 },
         { id: 4, job_name: data.job, grade: 3, name: 'boss', label: 'Šéf', salary: 5000 }
       ];
-    case 'getEmployeePlaytime':
-      // Generate random but somewhat consistent data for a week
-      const daysOfWeek = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
-      const result = [];
-      
-      // Create consistent but random data
-      const seed = parseInt(data.identifier) || 1;
-      const baseHours = 2 + (seed % 5); // Between 2-7 hours base
-      
-      for (let i = 0; i < 7; i++) {
-        // Generate consistent "random" values based on day and ID
-        const dayVariance = Math.sin(i * seed) * 2; // -2 to +2 variance
-        const hours = Math.max(0, Math.min(10, baseHours + dayVariance));
-        const roundedHours = Math.round(hours * 10) / 10; // Round to 1 decimal place
-        
-        result.push({
-          day: daysOfWeek[i],
-          hours: roundedHours,
-          performance: Math.floor((roundedHours / 2) * 0.57 * 100) // Same formula as server
-        });
-      }
-      return result;
-    case 'getJobData':
-      return {
-        name: data.job,
-        label: data.job.charAt(0).toUpperCase() + data.job.slice(1),
-        description: 'Default job description',
-        color: '#4a90e2',
-        grades: [
-          { grade: 0, name: 'recruit', label: 'Rekrut', salary: 2000 },
-          { grade: 1, name: 'officer', label: 'Důstojník', salary: 3000 },
-          { grade: 2, name: 'deputy', label: 'Zástupce', salary: 4000 },
-          { grade: 3, name: 'boss', label: 'Šéf', salary: 5000 }
-        ]
+    case 'hcyk_bossactions:getEmployeeNote':
+      return { 
+        success: true, 
+        note: "Toto je ukázková poznámka pro zaměstnance ID " + data.identifier
       };
+    case 'hcyk_bossactions:getEmployeesPlaytime':
+      // Generate mock playtime data for all employees
+      const mockPlaytimeData: {[key: string]: number} = {};
+      
+      // For our mock employees
+      const mockEmployeeIds = ['1', '2', '3'];
+      mockEmployeeIds.forEach(id => {
+        // Generate a reasonable playtime between 5 and 35 hours
+        mockPlaytimeData[id] = Math.floor(Math.random() * 30) + 5;
+      });
+      
+      return mockPlaytimeData;
     default:
       return {};
   }
@@ -133,24 +128,19 @@ export const fetchWithFallback = async <T = any>(
   data: any,
   useMock: boolean = false
 ): Promise<T> => {
+  // If data contains a job field, ensure it's properly formatted
+  if (data && data.job) {
+    data.job = ensureJobString(data.job);
+  }
+  
   try {
-    // Add debug logging to track request
-    console.log(`Attempting to fetch from ${endpoint} with data:`, data);
-    
-    const response = await fetchNUI<T>(endpoint, data);
-    
-    // Add debug logging of successful response
-    console.log(`Successful response from ${endpoint}:`, response);
-    
-    return response;
+    return await fetchNUI<T>(endpoint, data);
   } catch (error) {
     console.warn(`Error fetching ${endpoint}, ${useMock ? 'using mock data' : 'throwing error'}:`, error);
     
     if (useMock) {
       console.info(`Using mock data for ${endpoint}`);
-      const mockData = getMockData(endpoint, data) as T;
-      console.log(`Mock data for ${endpoint}:`, mockData);
-      return mockData;
+      return getMockData(endpoint, data) as T;
     }
     
     throw error;

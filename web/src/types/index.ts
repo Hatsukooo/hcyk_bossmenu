@@ -1,11 +1,11 @@
-// Stávající typy
+// types/index.ts
 export interface Employee {
   id: number;
   name: string;
   role: string;
   salary: number;
   level?: number;
-  performance: number;
+  weeklyPlaytime?: number;
 }
 
 export interface HistoryItem {
@@ -15,18 +15,8 @@ export interface HistoryItem {
   note: string;
 }
 
-export interface ActivityItem {
-  date: string;
-  activity: string;
-  hours: number;
-}
-
 export interface EmployeeHistory {
   [key: number]: HistoryItem[];
-}
-
-export interface EmployeeActivities {
-  [key: number]: ActivityItem[];
 }
 
 export interface JobData {
@@ -61,7 +51,7 @@ export interface JobGrade {
   salary: number;
 }
 
-// Přidané chybějící typy
+// Finance types
 export interface FinanceData {
   month: string;
   příjmy: number;
@@ -93,12 +83,6 @@ export interface Player {
   name: string;
 }
 
-export interface PlaytimeData {
-  day: string;
-  hours: number;
-  performance: number;
-}
-
 export interface EmployeeBackend {
   identifier: string;
   firstname: string;
@@ -107,7 +91,7 @@ export interface EmployeeBackend {
   grade_name: string;
   grade_label?: string;
   salary?: number;
-  performance?: number;
+  weeklyPlaytime?: number;
 }
 
 declare global {
@@ -142,6 +126,6 @@ export function convertBackendToEmployee(emp: EmployeeBackend): Employee {
     role: emp.grade_name,
     salary: emp.salary || 0,
     level: emp.grade,
-    performance: emp.performance || 75 
+    weeklyPlaytime: emp.weeklyPlaytime || 0
   };
 }

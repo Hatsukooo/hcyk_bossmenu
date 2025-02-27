@@ -1,8 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import LineChart from './charts/LineChart';
-import PieChart from './charts/PieChart';
-import BarChart from './charts/BarChart';
-import { financeData, expensesData } from '../data/mockData';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
 
 const FinancesTab: React.FC = () => {
@@ -63,35 +59,34 @@ const FinancesTab: React.FC = () => {
 
     fetchFinancialData();
   }, [timeRange]);
-  
-  // Celkový součet výdajů pro procentuální výpočet
-  const totalExpenses = expensesData.reduce((sum, item) => sum + item.hodnota, 0);
 
   if (loading) return <div>Načítání financí...</div>;
   if (error) return <div className="error-message">{error}</div>;
   
   return (
     <div className="tab-content">
-      <h2>Finance</h2>
-      
-      <div className="time-filter">
-        <button 
-          className={timeRange === "week" ? "active-filter" : ""} 
-          onClick={() => setTimeRange("week")}
-        >
-          Týden
-        </button>
-        <button 
-          className={timeRange === "month" ? "active-filter" : ""} 
-          onClick={() => setTimeRange("month")}
-        >
-          Měsíc
-        </button>
-        <button className={timeRange === "year" ? "active-filter" : ""} 
-          onClick={() => setTimeRange("year")}
-        >
-          Rok
-        </button>
+      <div className="finance-header">
+        <h2>Finance</h2>
+        <div className="time-filter">
+          <button 
+            className={timeRange === "week" ? "active-filter" : ""} 
+            onClick={() => setTimeRange("week")}
+          >
+            Týden
+          </button>
+          <button 
+            className={timeRange === "month" ? "active-filter" : ""} 
+            onClick={() => setTimeRange("month")}
+          >
+            Měsíc
+          </button>
+          <button 
+            className={timeRange === "year" ? "active-filter" : ""} 
+            onClick={() => setTimeRange("year")}
+          >
+            Rok
+          </button>
+        </div>
       </div>
       
       <div className="finance-overview">
@@ -112,52 +107,6 @@ const FinancesTab: React.FC = () => {
           <div className="stat-item">
             <h4>Čistý zisk</h4>
             <div className="stat-value net">+${financeStats.netProfit.toLocaleString()}</div>
-          </div>
-        </div>
-        
-        <div className="finance-charts">
-          <LineChart 
-            data={financeData} 
-            title="Vývoj financí (posledních 7 měsíců)" 
-          />
-          
-          <div className="charts-row">
-            <PieChart 
-              data={expensesData} 
-              title="Rozložení výdajů" 
-              totalValue={totalExpenses} 
-            />
-            
-            <BarChart 
-              data={financeData} 
-              title="Přehled zisku" 
-              dataKey="zisk" 
-              color="#4a90e2" 
-            />
-          </div>
-          
-          <div className="finance-breakdown">
-            <h3>Rozpis výdajů</h3>
-            <div className="expense-categories">
-              {expensesData.map((item, index) => (
-                <div className="expense-category" key={index}>
-                  <div className="category-name">
-                    <span className="category-color" style={{ backgroundColor: item.barva }}></span>
-                    <span>{item.name}</span>
-                  </div>
-                  <div className="category-value">${item.hodnota}</div>
-                  <div className="category-bar">
-                    <div 
-                      className="category-fill" 
-                      style={{ 
-                        width: `${(item.hodnota / totalExpenses * 100).toFixed(0)}%`, 
-                        backgroundColor: item.barva 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

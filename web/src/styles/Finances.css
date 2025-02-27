@@ -1,167 +1,100 @@
 /* Finance Tab Styles */
 .finance-overview {
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-  }
-  
-  .finance-card {
-    background-color: #343742;
-    border-radius: 8px;
-    padding: 25px;
-    text-align: center;
-  }
-  
-  .finance-card h3 {
-    font-size: 20px;
-    margin-bottom: 15px;
-    color: #d6d6d6;
-  }
-  
-  .balance {
-    font-size: 36px;
-    font-weight: 700;
-    color: #d6d6d6;
-  }
-  
-  .finance-stats {
-    display: flex;
-    justify-content: space-between;
-    gap: 20px;
-  }
-  
-  .stat-item {
-    background-color: #343742;
-    border-radius: 8px;
-    padding: 20px;
-    flex: 1;
-  }
-  
-  .stat-item h4 {
-    font-size: 16px;
-    margin-bottom: 10px;
-    color: #a0a0a0;
-  }
-  
-  .stat-value {
-    font-size: 24px;
-    font-weight: 600;
-  }
-  
-  .income {
-    color: #4cd964;
-  }
-  
-  .expenses {
-    color: #ff3b30;
-  }
-  
-  .net {
-    color: #4a90e2;
-  }
-  
-  /* Grafy a finance */
-  .finance-charts {
-    margin-top: 30px;
-  }
-  
-  .chart-container {
-    background-color: #343742;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  
-  .chart-container h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #d6d6d6;
-    text-align: center;
-  }
-  
-  .charts-row {
-    display: flex;
-    gap: 20px;
-  }
-  
-  .chart-container.half {
-    flex: 1;
-  }
-  
-  /* Filtr pro časový rozsah */
-  .time-filter {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  
-  .time-filter button {
-    padding: 8px 15px;
-  }
-  
-  .active-filter {
-    background-color: #4a90e2;
-    color: white;
-    border: 1px solid #4a90e2;
-  }
-  
-  /* Rozpis výdajů */
-  .finance-breakdown {
-    background-color: #343742;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-  }
-  
-  .finance-breakdown h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #d6d6d6;
-    text-align: center;
-  }
-  
-  .expense-categories {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .expense-category {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  
-  .category-name {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #d6d6d6;
-  }
-  
-  .category-color {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
-  
-  .category-value {
-    font-size: 16px;
-    font-weight: 500;
-    color: #fff;
-  }
-  
-  .category-bar {
-    height: 8px;
-    background-color: #2d3748;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  
-  .category-fill {
-    height: 100%;
-    border-radius: 4px;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.finance-card {
+  background-color: #343742;
+  border-radius: 8px;
+  padding: 25px;
+  text-align: center;
+}
+
+.finance-card h3 {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #d6d6d6;
+}
+
+.balance {
+  font-size: 36px;
+  font-weight: 700;
+  color: #d6d6d6;
+}
+
+.finance-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.stat-item {
+  background-color: #343742;
+  border-radius: 8px;
+  padding: 20px;
+  flex: 1;
+}
+
+.stat-item h4 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #a0a0a0;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.income {
+  color: #4cd964;
+}
+
+.expenses {
+  color: #ff3b30;
+}
+
+.net {
+  color: #4a90e2;
+}
+
+/* Filtr pro časový rozsah */
+.time-filter {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.time-filter button {
+  padding: 8px 15px;
+}
+
+.active-filter {
+  background-color: #4a90e2;
+  color: white;
+  border: 1px solid #4a90e2;
+}
+
+/* New finance header with inline filter buttons */
+.finance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 25px;
+}
+
+.finance-header h2 {
+  margin-bottom: 0;
+}
+
+.time-filter {
+  display: flex;
+  gap: 10px;
+}
+
+.time-filter button {
+  padding: 8px 15px;
+  font-size: 14px;
+}

@@ -1,8 +1,11 @@
+// Update web/src/components/FireTab.tsx to fix the job parameter issue
+
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Employee, EmployeeBackend } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
+import { fetchWithFallback, getFallbackJob } from '../utils/api';
 
 const FireTab: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -18,13 +21,17 @@ const FireTab: React.FC = () => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await fetch('https://hcyk_bossmenu/getEmployees', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job: window.PlayerData?.job?.name || 'police' })
-        });
+        setLoading(true);
         
-        const data = await response.json();
+        const jobName = getFallbackJob();
+        console.log("Fetching employees for job:", jobName);
+        
+        // Use the fetchWithFallback utility for consistency
+        const data = await fetchWithFallback<EmployeeBackend[]>(
+          'hcyk_bossactions:getEmployees',
+          { job: jobName },
+          true // Use mock data if fetch fails
+        );
         
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
@@ -35,7 +42,7 @@ const FireTab: React.FC = () => {
             name: `${emp.firstname} ${emp.lastname}`,
             role: emp.grade_name,
             salary: emp.salary || 0,
-            performance: 75,
+            performance: emp.performance || 75,
             level: emp.grade
           }));
           
@@ -62,17 +69,18 @@ const FireTab: React.FC = () => {
     if (!selectedEmployee) return;
 
     try {
-      const response = await fetch('https://hcyk_bossmenu/fireEmployee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const jobName = getFallbackJob();
+      console.log("Firing employee with job:", jobName);
+      
+      // Use fetchWithFallback for consistency
+      const result = await fetchWithFallback<{success: boolean; message?: string}>(
+        'hcyk_bossactions:fireEmployee',
+        {
+          job: jobName,
           identifier: selectedEmployee.id,
-          job: window.PlayerData?.job?.name,
           severance: severanceAmount
-        })
-      });
-
-      const result = await response.json();
+        }
+      );
       
       if (result.success) {
         // Remove employee from list

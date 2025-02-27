@@ -157,6 +157,14 @@ end)
 
 lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, identifier)
     local xPlayer = ESX.GetPlayerFromId(source)
+    
+    print("Fire request: ", source, job, identifier)
+    print("Player job data: ", xPlayer.getJob().name, xPlayer.getJob().grade_name)
+    
+    if type(job) == "table" and job.job then
+        job = job.job
+    end
+    
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
     end
@@ -323,7 +331,45 @@ lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job
     return {success = true, message = "Žádné změny k uložení"}
 end)
 
-lib.callback.register('hcyk_bossactions:getEmployeePlaytime', function(source, job, identifier)
+lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    
+    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    local success = false
+    
+    success = MySQL.Sync.execute(
+        "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
+        "ON DUPLICATE KEY UPDATE note = ?", 
+        {identifier, note, note}
+    )
+    
+    if success then
+        return {success = true, message = "Poznámka byla úspěšně uložena"}
+    else
+        return {success = false, message = "Nepodařilo se uložit poznámku"}
+    end
+end)
+
+lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    
+    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ?", {identifier})
+    
+    if result and #result > 0 then
+        return {success = true, note = result[1].note}
+    else
+        return {success = true, note = ""}
+    end
+end)
+
+lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
     
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
@@ -332,46 +378,30 @@ lib.callback.register('hcyk_bossactions:getEmployeePlaytime', function(source, j
     
     local currentTime = os.time()
     local currentDate = os.date("*t", currentTime)
-    local dayOfWeek = currentDate.wday - 1 
+    local dayOfWeek = currentDate.wday - 1
     if dayOfWeek == 0 then dayOfWeek = 7 end 
     
     local secondsToSubtract = (dayOfWeek - 1) * 86400 + currentDate.hour * 3600 + currentDate.min * 60 + currentDate.sec
     local weekStartTime = currentTime - secondsToSubtract
     
+    local employees = GetEmployees(job)
     local result = {}
-    local daysOfWeek = {"Po", "Út", "St", "Čt", "Pá", "So", "Ne"}
     
-    for i=1, 7 do
-        result[i] = {
-            day = daysOfWeek[i],
-            hours = 0,
-            performance = 0
-        }
-    end
-    
-    local success, playtimeData = pcall(function()
-        return MySQL.Sync.fetchAll(
-            "SELECT DATE_FORMAT(FROM_UNIXTIME(timestamp), '%w') as day_of_week, " ..
-            "SUM(duration) / 3600 as hours " ..
-            "FROM player_playtime " ..
-            "WHERE identifier = ? AND timestamp >= ? " ..
-            "GROUP BY day_of_week", 
+    for _, employee in ipairs(employees) do
+        local identifier = employee.identifier
+        local weeklyPlaytime = 0
+        
+        local playtimeData = MySQL.Sync.fetchAll(
+            "SELECT SUM(duration) as total_time FROM player_playtime " ..
+            "WHERE identifier = ? AND timestamp >= ?", 
             {identifier, weekStartTime}
         )
-    end)
-    
-    if success and playtimeData then
-        for _, dayData in ipairs(playtimeData) do
-            local dayIndex = tonumber(dayData.day_of_week)
-            
-            if dayIndex == 0 then dayIndex = 7 end
-            
-            local hours = tonumber(dayData.hours) or 0
-            result[dayIndex].hours = math.floor(hours * 10) / 10 
-            
-            result[dayIndex].performance = math.floor((hours / 2) * 0.57 * 100) 
-            result[dayIndex].performance = math.min(100, math.max(0, result[dayIndex].performance))
+        
+        if playtimeData and playtimeData[1] and playtimeData[1].total_time then
+            weeklyPlaytime = math.floor(playtimeData[1].total_time / 3600 * 10) / 10
         end
+        
+        result[identifier] = weeklyPlaytime
     end
     
     return result

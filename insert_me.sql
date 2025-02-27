@@ -36,3 +36,22 @@ CREATE TABLE IF NOT EXISTS `jobs_activity_log` (
   KEY `actor_identifier` (`actor_identifier`),
   KEY `target_identifier` (`target_identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `player_playtime` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `identifier` varchar(60) NOT NULL,
+  `timestamp` int(11) NOT NULL,
+  `duration` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `identifier` (`identifier`),
+  KEY `timestamp` (`timestamp`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `employee_notes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `employee_identifier` varchar(60) NOT NULL,
+  `note` text,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `employee_identifier` (`employee_identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
