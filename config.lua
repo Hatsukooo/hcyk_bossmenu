@@ -7,7 +7,6 @@ Config.AdminGroups = {'owner', 'admin'}
 Config.MenuCooldown = 1000
 Config.MaxTransaction = 100000
 
--- Lokace boss menu
 Config.Locations = {
     {
         name = "PDčka",
