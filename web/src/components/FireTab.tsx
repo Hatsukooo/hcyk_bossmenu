@@ -1,5 +1,3 @@
-// Update web/src/components/FireTab.tsx to fix the job parameter issue
-
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Employee, EmployeeBackend, convertBackendToEmployee } from '../types';
@@ -28,7 +26,7 @@ const FireTab: React.FC = () => {
         
         // Use the fetchWithFallback utility for consistency
         const data = await fetchWithFallback<EmployeeBackend[]>(
-          'hcyk_bossactions:getEmployees',
+          'getEmployees', 
           { job: jobName },
           true // Use mock data if fetch fails
         );
@@ -64,13 +62,12 @@ const FireTab: React.FC = () => {
       const jobName = getFallbackJob();
       console.log("Firing employee with job:", jobName);
       
-      // Use fetchWithFallback for consistency
+      // Use fetchWithFallback for consistency and fix parameter name
       const result = await fetchWithFallback<{success: boolean; message?: string}>(
-        'hcyk_bossactions:fireEmployee',
+        'fireEmployee', 
         {
           job: jobName,
-          identifier: selectedEmployee.id,
-          severance: severanceAmount
+          identifier: selectedEmployee.id.toString() // Ensure identifier is a string
         }
       );
       

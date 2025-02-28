@@ -253,7 +253,6 @@ const FactionManagementTab: React.FC = () => {
     });
   };
   
-  // Save faction settings
   const handleSaveFactionSettings = async () => {
     if (!jobData) return;
     
@@ -277,6 +276,22 @@ const FactionManagementTab: React.FC = () => {
       if (response.success) {
         showNotification('success', 'Nastavení frakce bylo úspěšně uloženo');
         setJobFormChanged(false);
+        
+        // Reload job data to refresh the UI with updated values
+        try {
+          const refreshedJobData = await fetchWithFallback<JobData>(
+            'getJobData', 
+            { job: getFallbackJob() }, 
+            true
+          );
+          
+          if (refreshedJobData) {
+            setJobData(refreshedJobData);
+            setInitialJobLabel(refreshedJobData.label || '');
+          }
+        } catch (refreshError) {
+          console.error('Chyba při aktualizaci dat frakce:', refreshError);
+        }
       } else {
         showNotification('error', response.message || 'Nepodařilo se uložit nastavení frakce');
       }

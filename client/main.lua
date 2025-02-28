@@ -60,21 +60,29 @@ RegisterNUICallback('getEmployees', function(data, cb)
 end)
 
 RegisterNUICallback('hireEmployee', function(data, cb)
-    debugPrint('Hiring employee for job', data.job)
-    data = normalizeJobParameter(data)
+    debugPrint('Hiring employee for job', data.job, 'position', data.position)
     
-    lib.callback('hcyk_bossactions:hireEmployee', false, function(result)
+    lib.callback('hcyk_bossactions:hireEmployee', 1000, function(result)
         cb(result or {success = false, message = "Unknown error"})
     end, data.job, data.player, data.position)
 end)
 
 RegisterNUICallback('fireEmployee', function(data, cb)
-    debugPrint('Firing employee from job', data.job)
-    data = normalizeJobParameter(data)
+    debugPrint('Firing employee from job', data.job, 'ID', data.identifier)
     
-    lib.callback('hcyk_bossactions:fireEmployee', false, function(result)
+    local job = data.job
+    if type(job) == "table" and job.job then
+        job = job.job
+    end
+    
+    local identifier = data.identifier
+    if type(identifier) == "number" then
+        identifier = tostring(identifier)
+    end
+    
+    lib.callback('hcyk_bossactions:fireEmployee', 1000, function(result)
         cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.identifier)
+    end, job, identifier)
 end)
 
 RegisterNUICallback('setGrade', function(data, cb)
@@ -96,13 +104,17 @@ RegisterNUICallback('setSalary', function(data, cb)
 end)
 
 RegisterNUICallback('setEmployeeDetails', function(data, cb)
-    debugPrint('Updating employee details for job', data.job)
-    data = normalizeJobParameter(data)
+    debugPrint('Setting employee details for', data.identifier, 'level', data.level)
     
-    lib.callback('hcyk_bossactions:setGrade', false, function(result)
+    local identifier = data.identifier
+    if type(identifier) == "number" then
+        identifier = tostring(identifier)
+    end
+    
+    lib.callback('hcyk_bossactions:setGrade', 1000, function(result)
         if result and result.success then
             if data.salary then
-                lib.callback('hcyk_bossactions:setSalary', false, function(salaryResult)
+                lib.callback('hcyk_bossactions:setSalary', 1000, function(salaryResult)
                     cb(salaryResult or {success = false, message = "Failed to update salary"})
                 end, data.job, data.level, data.salary)
             else
@@ -111,8 +123,9 @@ RegisterNUICallback('setEmployeeDetails', function(data, cb)
         else
             cb(result or {success = false, message = "Unknown error"})
         end
-    end, data.job, data.identifier, data.level)
+    end, data.job, identifier, data.level)
 end)
+
 
 RegisterNUICallback('getEmployeesPlaytime', function(data, cb)
     debugPrint('Fetching employees playtime for job', data.job)
@@ -198,9 +211,8 @@ end)
 
 RegisterNUICallback('updateJobSettings', function(data, cb)
     debugPrint('Updating job settings for', data.job)
-    data = normalizeJobParameter(data)
     
-    lib.callback('hcyk_bossactions:updateJobSettings', false, function(result)
+    lib.callback('hcyk_bossactions:updateJobSettings', 1000, function(result)
         cb(result or {success = false, message = "Unknown error"})
     end, data.job, data.data)
 end)
@@ -216,12 +228,16 @@ RegisterNUICallback('getEmployeeNote', function(data, cb)
 end)
 
 RegisterNUICallback('saveEmployeeNote', function(data, cb)
-    debugPrint('Saving employee note for', data.identifier)
-    data = normalizeJobParameter(data)
+    debugPrint('Saving note for employee', data.identifier, 'job', data.job)
     
-    lib.callback('hcyk_bossactions:saveEmployeeNote', false, function(result)
-        cb(result or {success = false, message = "Failed to save note"})
-    end, data.job, data.identifier, data.note)
+    local identifier = data.identifier
+    if type(identifier) == "number" then
+        identifier = tostring(identifier)
+    end
+    
+    lib.callback('hcyk_bossactions:saveEmployeeNote', 1000, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, identifier, data.note)
 end)
 
 -- Misc callbacks

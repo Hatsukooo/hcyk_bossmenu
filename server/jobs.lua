@@ -53,7 +53,6 @@ function GetEmployees(job)
         return result
     end
     
-    -- Second attempt - Without collation specifics
     local query2 = [[
         SELECT 
             u.identifier, 
@@ -163,6 +162,10 @@ lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, ide
         job = job.job
     end
     
+    if type(identifier) == "number" then
+        identifier = tostring(identifier)
+    end
+    
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
     end
@@ -182,7 +185,13 @@ lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, ide
         if result and result > 0 then
             return {success = true, message = "Hráč byl úspěšně propuštěn"}
         else
-            return {success = false, message = "Hráč nebyl nalezen nebo není ve vaší firmě"}
+            local playerExists = MySQL.Sync.fetchScalar('SELECT COUNT(*) FROM users WHERE identifier = ?', {identifier})
+            
+            if playerExists and playerExists > 0 then
+                return {success = false, message = "Hráč není ve vaší firmě"}
+            else
+                return {success = false, message = "Hráč nebyl nalezen"}
+            end
         end
     end
 end)
@@ -310,27 +319,12 @@ lib.callback.register('hcyk_bossactions:getJobData', function(source, job)
     return jobData
 end)
 
-lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job, data)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
-        return {success = false, message = "Nemáš oprávnění"}
-    end
-    
-    if data.label and data.label ~= '' then
-        local success = SafeMySQL.execute('UPDATE `jobs` SET label = ? WHERE name = ?', {data.label, job})
-        
-        if success then
-            return {success = true, message = "Název frakce byl úspěšně změněn"}
-        else
-            return {success = false, message = "Nepodařilo se změnit název frakce"}
-        end
-    end
-    
-    return {success = true, message = "Žádné změny k uložení"}
-end)
-
 lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
     local xPlayer = ESX.GetPlayerFromId(source)
+    
+    if type(identifier) == "number" then
+        identifier = tostring(identifier)
+    end
     
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
@@ -338,15 +332,19 @@ lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job,
     
     local success = false
     
-    success = MySQL.Sync.execute(
-        "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
-        "ON DUPLICATE KEY UPDATE note = ?", 
-        {identifier, note, note}
-    )
+    local result
+    local querySuccess = pcall(function()
+        result = MySQL.Sync.execute(
+            "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
+            "ON DUPLICATE KEY UPDATE note = ?", 
+            {identifier, note, note}
+        )
+    end)
     
-    if success then
+    if querySuccess and result then
         return {success = true, message = "Poznámka byla úspěšně uložena"}
     else
+        print("Failed to save employee note for", identifier, "Error:", result)
         return {success = false, message = "Nepodařilo se uložit poznámku"}
     end
 end)
@@ -403,4 +401,58 @@ lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, 
     end
     
     return result
+end)
+
+lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job, data)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    print("Updating job settings for", job, "with data:", json.encode(data))
+    
+    if data.label and data.label ~= '' then
+        local success = false
+        local querySuccess = pcall(function()
+            success = MySQL.Sync.execute('UPDATE `jobs` SET label = ? WHERE name = ?', {data.label, job})
+        end)
+        
+        if querySuccess and success then
+            local players = ESX.GetPlayers()
+            for _, playerId in ipairs(players) do
+                local targetPlayer = ESX.GetPlayerFromId(playerId)
+                if targetPlayer and targetPlayer.getJob().name == job then
+                    targetPlayer.setJob(job, targetPlayer.getJob().grade)
+                end
+            end
+            
+            return {success = true, message = "Název frakce byl úspěšně změněn"}
+        else
+            return {success = false, message = "Nepodařilo se změnit název frakce"}
+        end
+    end
+    
+    if data.settings then
+        local settings = data.settings
+        
+        local tableExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'jobs_settings'")
+        
+        if tableExists > 0 then
+            local existingSettings = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM jobs_settings WHERE job_name = ?", {job})
+            
+            if existingSettings > 0 then
+                MySQL.Sync.execute(
+                    "UPDATE jobs_settings SET description = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE job_name = ?", 
+                    {settings.description, settings.color, job}
+                )
+            else
+                MySQL.Sync.execute(
+                    "INSERT INTO jobs_settings (job_name, description, color) VALUES (?, ?, ?)", 
+                    {job, settings.description, settings.color}
+                )
+            end
+        end
+    end
+    
+    return {success = true, message = "Nastavení frakce bylo úspěšně uloženo"}
 end)

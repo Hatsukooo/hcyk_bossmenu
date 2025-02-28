@@ -34,40 +34,22 @@ const HireTab: React.FC = () => {
         setLoading(true);
         const job = getFallbackJob();
         
-        // Fetch nearby players
-        const playersData = await fetch('https://hcyk_bossmenu/getNearbyPlayers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job })
-        })
-        .then(response => response.text())
-        .then(text => {
-          try {
-            return text ? JSON.parse(text) : [];
-          } catch (e) {
-            console.error('Failed to parse nearby players response:', text);
-            return [];
-          }
-        });
+        // Fetch nearby players using fetchWithFallback
+        const playersData = await fetchWithFallback<NearbyPlayer[]>(
+          'getNearbyPlayers', 
+          { job },
+          true // Use mock data if fetch fails
+        );
         
         setNearbyPlayers(Array.isArray(playersData) ? playersData : []);
         
         // Fetch job grades (ranks)
         setLoadingGrades(true);
-        const ranks = await fetch('https://hcyk_bossmenu/getRanks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job })
-        })
-        .then(response => response.text())
-        .then(text => {
-          try {
-            return text ? JSON.parse(text) : [];
-          } catch (e) {
-            console.error('Failed to parse ranks response:', text);
-            return [];
-          }
-        });
+        const ranks = await fetchWithFallback<JobGrade[]>(
+          'getRanks', 
+          { job },
+          true // Use mock data if fetch fails
+        );
         
         // Sort ranks by grade
         const sortedRanks = Array.isArray(ranks) 
@@ -103,19 +85,17 @@ const HireTab: React.FC = () => {
         return;
       }
       
-      const response = await fetch('https://hcyk_bossmenu/hireEmployee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Use fetchWithFallback for consistency
+      const result = await fetchWithFallback<{success: boolean; message?: string}>(
+        'hireEmployee', 
+        {
           player: selectedPlayer,
           job: getFallbackJob(),
           position: selectedGrade.grade, // Send grade number instead of name
           additionalInfo,
           salary: selectedGrade.salary
-        })
-      });
-
-      const result = await response.json();
+        }
+      );
       
       if (result.success) {
         showNotification('success', 'Zaměstnanec byl úspěšně přijat');

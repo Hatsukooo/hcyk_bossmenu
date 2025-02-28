@@ -171,34 +171,35 @@ const EmployeesTab: React.FC = () => {
     }
   };
   
-  // Handler for saving changes
   const handleSaveChanges = async () => {
     if (!selectedEmployee) return;
   
     try {
-      // Save position and salary changes
-      const response = await fetchWithFallback(
-        'setEmployeeDetails', 
-        {
-          identifier: selectedEmployee.id,
-          job: getFallbackJob(),
-          role: formData.role,
-          salary: formData.salary
-        }
-      );
-
-      // Save note separately
       const noteResponse = await fetchWithFallback(
-        'hcyk_bossactions:saveEmployeeNote',
+        'saveEmployeeNote', 
         {
           job: getFallbackJob(),
           identifier: selectedEmployee.id.toString(),
           note: formData.note
         }
       );
-
-      if (response.success && noteResponse.success) {
-        // Update local state
+  
+      if (!noteResponse.success) {
+        showNotification('error', noteResponse.message || 'Nepodařilo se uložit poznámku');
+        return;
+      }
+  
+      const detailsResponse = await fetchWithFallback(
+        'setEmployeeDetails', 
+        {
+          identifier: selectedEmployee.id,
+          job: getFallbackJob(),
+          level: selectedEmployee.level,
+          salary: formData.salary
+        }
+      );
+  
+      if (detailsResponse.success) {
         setEmployees(prev => prev.map(emp => 
           emp.id === selectedEmployee.id 
             ? {...emp, role: formData.role, salary: formData.salary} 
@@ -213,7 +214,7 @@ const EmployeesTab: React.FC = () => {
         setFormChanged(false);
         showNotification('success', 'Změny uloženy úspěšně');
       } else {
-        showNotification('error', (response.message || noteResponse.message) || 'Nepodařilo se uložit změny');
+        showNotification('error', detailsResponse.message || 'Nepodařilo se uložit změny');
       }
     } catch (err) {
       console.error('Chyba při ukládání změn:', err);
@@ -221,14 +222,12 @@ const EmployeesTab: React.FC = () => {
     }
   };
   
-  // Handlers
   const handleOpenDetail = (employee: Employee) => {
     setSelectedEmployee(employee);
     setActiveTab("historie");
     setShowDetailModal(true);
   };
   
-  // Filter employees based on search term and role filter
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === '' || emp.role === roleFilter;
