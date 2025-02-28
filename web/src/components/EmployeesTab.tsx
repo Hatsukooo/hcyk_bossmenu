@@ -305,17 +305,20 @@ const EmployeesTab: React.FC = () => {
       const cleanEmployee = convertEmployeeData(employee);
       console.log('[DEBUG] Converted employee:', JSON.stringify(cleanEmployee));
       
-      if (!cleanEmployee || !cleanEmployee.id) {
-        console.error('[DEBUG] Failed to convert employee, or no ID found');
+      const employeeId = safelyExtractEmployeeId(cleanEmployee);
+      if (!employeeId) {
+        console.error('[DEBUG] Failed to extract valid employee ID');
+        showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
         return;
       }
       
-      console.log('[DEBUG] Opening detail for employee ID:', cleanEmployee.id);
+      console.log('[DEBUG] Opening detail for employee ID:', employeeId);
       setSelectedEmployee(cleanEmployee);
       setActiveTab("historie");
       setShowDetailModal(true);
     } catch (err) {
       console.error('[DEBUG] Error in handleOpenDetail:', err);
+      showNotification('error', 'Nastala chyba při otevírání detailu');
     }
   };
   

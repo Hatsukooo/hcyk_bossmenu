@@ -1,4 +1,3 @@
-// Fixed FireTab.tsx with proper TypeScript typing
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useNotification } from '../context/NotificationContext';
@@ -70,15 +69,8 @@ const FireTab: React.FC = () => {
   
     // Convert the employee data to ensure it's in the right format
     const cleanEmployee = convertEmployeeData(employee);
-    const employeeId = safelyExtractEmployeeId(cleanEmployee);
     
-    if (!employeeId) {
-      console.error('[DEBUG] Invalid employee ID:', employee);
-      showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
-      return;
-    }
-    
-    console.log('[DEBUG] Opening fire confirmation for employee ID:', employeeId);
+    console.log('[DEBUG] Opening fire confirmation for employee:', cleanEmployee.name);
     
     setSelectedEmployee(cleanEmployee);
     setSeveranceAmount(Math.round(cleanEmployee.salary / 2));
@@ -111,10 +103,12 @@ const FireTab: React.FC = () => {
       );
       
       if (result.success) {
-        // Use the safelyExtractEmployeeId function to filter the employees array
-        setEmployees(prev => prev.filter(emp => 
-          safelyExtractEmployeeId(emp) !== employeeId
-        ));
+        // Update the local employees list
+        setEmployees(prev => prev.filter(emp => {
+          const currentEmpId = safelyExtractEmployeeId(emp);
+          return currentEmpId !== employeeId;
+        }));
+        
         setShowConfirmModal(false);
         showNotification('success', 'Zaměstnanec byl úspěšně propuštěn');
       } else {
@@ -134,12 +128,8 @@ const FireTab: React.FC = () => {
       <h2>Propustit</h2>
       <div className="employees-list">
         {employees.map(emp => {
-          // Safe extraction of ID for key
-          const empId = safelyExtractEmployeeId(emp);
-          console.log('[DEBUG] Rendering employee card with ID:', empId);
-          
           return (
-            <div key={String(empId || Math.random())} className="employee-card">
+            <div key={String(emp.id || Math.random())} className="employee-card">
               <div className="employee-info">
                 <h3>{emp.name}</h3>
                 <p>Pozice: {emp.role}</p>
