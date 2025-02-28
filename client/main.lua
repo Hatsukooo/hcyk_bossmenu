@@ -186,10 +186,9 @@ CreateThread(function()
     end
 end)
 
--- Přidat do main.lua
 function ResetMenuState()
     debugPrint("Resetting menu state")
-    menuOpen = false -- Přímo nastavíme proměnnou
+    menuOpen = false
     SetNuiFocus(false, false)
     SendNUIMessage({
         action = 'setVisible',
@@ -198,7 +197,6 @@ function ResetMenuState()
     debugPrint("Menu state after reset:", IsMenuOpen())
 end
 
--- Přidáme event handler pro reset
 RegisterNetEvent('hcyk_bossmenu:resetState')
 AddEventHandler('hcyk_bossmenu:resetState', function()
     ResetMenuState()
