@@ -1,5 +1,3 @@
--- Add this to client/main.lua, replacing any existing NUI callback registrations
-
 ESX = exports["es_extended"]:getSharedObject()
 
 menuOpen = false  
@@ -37,7 +35,222 @@ CreateThread(function()
     loadBossZones()
 end)
 
--- Basic NUI Callbacks
+-- Common helper function to handle job parameter format
+local function normalizeJobParameter(data)
+    if type(data.job) == "table" and data.job.job then
+        data.job = data.job.job
+    end
+    return data
+end
+
+-- Employee-related callbacks
+RegisterNUICallback('getEmployees', function(data, cb)
+    debugPrint('Fetching employees for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getEmployees', false, function(employees)
+        if employees then
+            debugPrint('Received', #employees, 'employees')
+            cb(employees)
+        else
+            debugPrint('No employees received')
+            cb({})
+        end
+    end, data.job)
+end)
+
+RegisterNUICallback('hireEmployee', function(data, cb)
+    debugPrint('Hiring employee for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:hireEmployee', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.player, data.position)
+end)
+
+RegisterNUICallback('fireEmployee', function(data, cb)
+    debugPrint('Firing employee from job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:fireEmployee', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.identifier)
+end)
+
+RegisterNUICallback('setGrade', function(data, cb)
+    debugPrint('Setting grade for employee in job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:setGrade', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.identifier, data.level)
+end)
+
+RegisterNUICallback('setSalary', function(data, cb)
+    debugPrint('Setting salary for grade in job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:setSalary', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.level, data.salary)
+end)
+
+RegisterNUICallback('setEmployeeDetails', function(data, cb)
+    debugPrint('Updating employee details for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:setGrade', false, function(result)
+        if result and result.success then
+            if data.salary then
+                lib.callback('hcyk_bossactions:setSalary', false, function(salaryResult)
+                    cb(salaryResult or {success = false, message = "Failed to update salary"})
+                end, data.job, data.level, data.salary)
+            else
+                cb(result)
+            end
+        else
+            cb(result or {success = false, message = "Unknown error"})
+        end
+    end, data.job, data.identifier, data.level)
+end)
+
+RegisterNUICallback('getEmployeesPlaytime', function(data, cb)
+    debugPrint('Fetching employees playtime for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getEmployeesPlaytime', false, function(result)
+        cb(result or {})
+    end, data.job)
+end)
+
+-- Finance-related callbacks
+RegisterNUICallback('getSocietyMoney', function(data, cb)
+    debugPrint('Fetching society money for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getSocietyMoney', false, function(money)
+        cb(money or 0)
+    end, data.job)
+end)
+
+RegisterNUICallback('getFinancialStats', function(data, cb)
+    debugPrint('Fetching financial stats for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getFinancialStats', false, function(stats)
+        if stats then
+            cb(stats)
+        else
+            cb({income = 0, expenses = 0, netProfit = 0})
+        end
+    end, data.job, data.timeRange)
+end)
+
+-- Job management callbacks
+RegisterNUICallback('getJobData', function(data, cb)
+    debugPrint('Fetching job data for', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getJobData', false, function(jobData)
+        cb(jobData or {name = data.job, label = data.job, grades = {}})
+    end, data.job)
+end)
+
+RegisterNUICallback('getRanks', function(data, cb)
+    debugPrint('Fetching ranks for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getRanks', false, function(ranks)
+        if ranks then
+            cb(ranks)
+        else
+            cb({})
+        end
+    end, data.job)
+end)
+
+RegisterNUICallback('createRank', function(data, cb)
+    debugPrint('Creating new rank for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:createRank', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.data)
+end)
+
+RegisterNUICallback('updateRank', function(data, cb)
+    debugPrint('Updating rank for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:updateRank', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.grade, data.data)
+end)
+
+RegisterNUICallback('deleteRank', function(data, cb)
+    debugPrint('Deleting rank from job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:deleteRank', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.grade)
+end)
+
+RegisterNUICallback('updateJobSettings', function(data, cb)
+    debugPrint('Updating job settings for', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:updateJobSettings', false, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, data.job, data.data)
+end)
+
+-- Employee notes callbacks
+RegisterNUICallback('getEmployeeNote', function(data, cb)
+    debugPrint('Fetching employee note for', data.identifier)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getEmployeeNote', false, function(result)
+        cb(result or {success = false, note = ""})
+    end, data.job, data.identifier)
+end)
+
+RegisterNUICallback('saveEmployeeNote', function(data, cb)
+    debugPrint('Saving employee note for', data.identifier)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:saveEmployeeNote', false, function(result)
+        cb(result or {success = false, message = "Failed to save note"})
+    end, data.job, data.identifier, data.note)
+end)
+
+-- Misc callbacks
+RegisterNUICallback('getNearbyPlayers', function(data, cb)
+    debugPrint('Fetching nearby players for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getNearbyPlayers', false, function(players)
+        cb(players or {})
+    end, data.job)
+end)
+
+RegisterNUICallback('showNotification', function(data, cb)
+    local type = data.type or 'info'
+    local message = data.message or ''
+    
+    if type == 'success' then
+        ESX.ShowNotification(message)
+    elseif type == 'error' then
+        ESX.ShowNotification('~r~' .. message)
+    elseif type == 'warning' then
+        ESX.ShowNotification('~y~' .. message)
+    else
+        ESX.ShowNotification(message)
+    end
+    
+    cb({success = true})
+end)
+
 RegisterNUICallback('hideUI', function(_, cb)
     debugPrint("hideUI callback called, setting menu state to closed")
     
@@ -59,215 +272,6 @@ RegisterNUICallback('hideUI', function(_, cb)
             debugPrint("Menu successfully closed")
         end
     end)
-end)
-
--- Employee Management Callbacks
-RegisterNUICallback('getEmployees', function(data, cb)
-    debugPrint('Fetching employees for job', data.job)
-    
-    lib.callback('hcyk_bossactions:getEmployees', false, function(employees)
-        if employees then
-            debugPrint('Received', #employees, 'employees')
-            cb(employees)
-        else
-            debugPrint('No employees received')
-            cb({})
-        end
-    end, data.job)
-end)
-
-RegisterNUICallback('hireEmployee', function(data, cb)
-    debugPrint('Hiring employee for job', data.job, 'position', data.position)
-    
-    lib.callback('hcyk_bossactions:hireEmployee', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.player, data.position)
-end)
-
-RegisterNUICallback('fireEmployee', function(data, cb)
-    debugPrint('Firing employee from job', data.job, 'ID', data.identifier)
-    
-    local job = data.job
-    if type(job) == "table" and job.job then
-        job = job.job
-    end
-    
-    lib.callback('hcyk_bossactions:fireEmployee', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, job, data.identifier)
-end)
-
-RegisterNUICallback('setEmployeeDetails', function(data, cb)
-    debugPrint('Setting employee details for', data.identifier, 'level', data.level)
-    
-    lib.callback('hcyk_bossactions:setGrade', 1000, function(result)
-        if result and result.success then
-            if data.salary then
-                lib.callback('hcyk_bossactions:setSalary', 1000, function(salaryResult)
-                    cb(salaryResult or {success = false, message = "Failed to update salary"})
-                end, data.job, data.level, data.salary)
-            else
-                cb(result)
-            end
-        else
-            cb(result or {success = false, message = "Unknown error"})
-        end
-    end, data.job, data.identifier, data.level)
-end)
-
--- Finance Management Callbacks
-RegisterNUICallback('getSocietyMoney', function(data, cb)
-    debugPrint('Getting society money for', data.job)
-    
-    lib.callback('hcyk_bossactions:getSocietyMoney', 1000, function(money)
-        cb(money or 0)
-    end, data.job)
-end)
-
-RegisterNUICallback('getFinancialStats', function(data, cb)
-    debugPrint('Getting financial stats for', data.job, 'time range', data.timeRange)
-    
-    lib.callback('hcyk_bossactions:getFinancialStats', 1000, function(stats)
-        if stats then
-            cb(stats)
-        else
-            cb({income = 0, expenses = 0, netProfit = 0})
-        end
-    end, data.job, data.timeRange)
-end)
-
--- Rank Management Callbacks
-RegisterNUICallback('getRanks', function(data, cb)
-    debugPrint('Getting ranks for job', data.job)
-    
-    lib.callback('hcyk_bossactions:getRanks', 1000, function(ranks)
-        if ranks then
-            cb(ranks)
-        else
-            cb({})
-        end
-    end, data.job)
-end)
-
-RegisterNUICallback('createRank', function(data, cb)
-    debugPrint('Creating new rank for job', data.job)
-    
-    lib.callback('hcyk_bossactions:createRank', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.data)
-end)
-
-RegisterNUICallback('updateRank', function(data, cb)
-    debugPrint('Updating rank', data.grade, 'for job', data.job)
-    
-    lib.callback('hcyk_bossactions:updateRank', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.grade, data.data)
-end)
-
-RegisterNUICallback('deleteRank', function(data, cb)
-    debugPrint('Deleting rank', data.grade, 'from job', data.job)
-    
-    lib.callback('hcyk_bossactions:deleteRank', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.grade)
-end)
-
--- Job Data Callbacks
-RegisterNUICallback('getJobData', function(data, cb)
-    debugPrint('Getting job data for', data.job)
-    
-    lib.callback('hcyk_bossactions:getJobData', 1000, function(jobData)
-        cb(jobData or {})
-    end, data.job)
-end)
-
-RegisterNUICallback('updateJobSettings', function(data, cb)
-    debugPrint('Updating job settings for', data.job)
-    
-    lib.callback('hcyk_bossactions:updateJobSettings', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.data)
-end)
-
--- Employee Notes Callbacks
-RegisterNUICallback('getEmployeeNote', function(data, cb)
-    debugPrint('Getting note for employee', data.identifier, 'job', data.job)
-    
-    lib.callback('hcyk_bossactions:getEmployeeNote', 1000, function(result)
-        cb(result or {success = false, note: ""})
-    end, data.job, data.identifier)
-end)
-
-RegisterNUICallback('saveEmployeeNote', function(data, cb)
-    debugPrint('Saving note for employee', data.identifier, 'job', data.job)
-    
-    lib.callback('hcyk_bossactions:saveEmployeeNote', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.identifier, data.note)
-end)
-
--- Nearby Players Callback
-RegisterNUICallback('getNearbyPlayers', function(data, cb)
-    debugPrint('Getting nearby players for job', data.job)
-    
-    lib.callback('hcyk_bossactions:getNearbyPlayers', 1000, function(players)
-        cb(players or {})
-    end, data.job)
-end)
-
--- Playtime Callbacks
-RegisterNUICallback('getEmployeesPlaytime', function(data, cb)
-    debugPrint('Getting employees playtime for job', data.job)
-    
-    lib.callback('hcyk_bossactions:getEmployeesPlaytime', 1000, function(playtime)
-        cb(playtime or {})
-    end, data.job)
-end)
-
-RegisterNUICallback('getEmployeePlaytime', function(data, cb)
-    debugPrint('Getting playtime for employee', data.identifier, 'job', data.job)
-    
-    lib.callback('hcyk_bossactions:getEmployeePlaytime', 1000, function(playtime)
-        cb(playtime or {})
-    end, data.job, data.identifier)
-end)
-
--- Notifications Callback
-RegisterNUICallback('showNotification', function(data, cb)
-    local type = data.type or 'info'
-    local message = data.message or ''
-    
-    if type == 'success' then
-        ESX.ShowNotification(message)
-    elseif type == 'error' then
-        ESX.ShowNotification('~r~' .. message)
-    elseif type == 'warning' then
-        ESX.ShowNotification('~y~' .. message)
-    else
-        ESX.ShowNotification(message)
-    end
-    
-    cb({success = true})
-end)
-
-CreateThread(function()
-    while true do
-        Citizen.Wait(0)
-        if IsMenuOpen() then
-            if (IsControlJustReleased(0, 177) or IsControlJustReleased(0, 194)) then
-                debugPrint("ESC/Backspace pressed, closing menu")
-                SetMenuOpen(false)
-                SetNuiFocus(false, false)
-                SendNUIMessage({
-                    action = 'setVisible',
-                    data = false
-                })
-            end
-        else
-            Citizen.Wait(500)
-        end
-    end
 end)
 
 function ResetMenuState()

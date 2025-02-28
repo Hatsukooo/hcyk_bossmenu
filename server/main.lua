@@ -4,21 +4,6 @@ local function logError(message, ...)
     print('^1[HCYK_BOSSACTIONS] ERROR: ' .. formatted .. '^7')
 end
 
-function LogError(source, message)
-    local identifier = "Unknown"
-    local name = "Unknown"
-    
-    if source > 0 then
-        local xPlayer = ESX.GetPlayerFromId(source)
-        if xPlayer then
-            identifier = xPlayer.identifier
-            name = xPlayer.getName()
-        end
-    end
-    
-    print(string.format("[ERROR] %s | %s | %s", identifier, name, message))
-end
-
 local function checkBossPermissions(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
     return xPlayer and xPlayer.getJob().name == job and xPlayer.getJob().grade_name == 'boss'
@@ -166,5 +151,104 @@ CreateThread(function()
                 
             playerSessions[src].startTime = currentTime
         end
+    end
+end)
+
+local function normalizeCallbackParams(source, job, ...)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local jobName = job
+    
+    -- Handle different job parameter formats
+    if type(job) == "table" then
+        if job.job then
+            jobName = job.job
+        elseif job.name then
+            jobName = job.name
+        end
+    end
+    
+    return xPlayer, jobName, ...
+end
+
+-- Fix for getEmployeesPlaytime callback
+lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, job)
+    local xPlayer, jobName = normalizeCallbackParams(source, job)
+    
+    if not xPlayer or xPlayer.getJob().name ~= jobName or xPlayer.getJob().grade_name ~= 'boss' then
+        return {}
+    end
+    
+    local currentTime = os.time()
+    local currentDate = os.date("*t", currentTime)
+    local dayOfWeek = currentDate.wday - 1
+    if dayOfWeek == 0 then dayOfWeek = 7 end 
+    
+    local secondsToSubtract = (dayOfWeek - 1) * 86400 + currentDate.hour * 3600 + currentDate.min * 60 + currentDate.sec
+    local weekStartTime = currentTime - secondsToSubtract
+    
+    local employees = GetEmployees(jobName)
+    local result = {}
+    
+    for _, employee in ipairs(employees) do
+        local identifier = employee.identifier
+        local weeklyPlaytime = 0
+        
+        local success, playtimeData = pcall(function()
+            return MySQL.Sync.fetchAll(
+                "SELECT SUM(duration) as total_time FROM player_playtime " ..
+                "WHERE identifier = ? AND timestamp >= ?", 
+                {identifier, weekStartTime}
+            )
+        end)
+        
+        if success and playtimeData and playtimeData[1] and playtimeData[1].total_time then
+            weeklyPlaytime = math.floor(playtimeData[1].total_time / 3600 * 10) / 10
+        end
+        
+        result[identifier] = weeklyPlaytime
+    end
+    
+    return result
+end)
+
+-- Fix for getEmployeeNote callback
+lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
+    local xPlayer, jobName = normalizeCallbackParams(source, job)
+    
+    if not xPlayer or xPlayer.getJob().name ~= jobName or xPlayer.getJob().grade_name ~= 'boss' then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    local success, result = pcall(function()
+        return MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ?", {identifier})
+    end)
+    
+    if success and result and #result > 0 then
+        return {success = true, note = result[1].note}
+    else
+        return {success = true, note = ""}
+    end
+end)
+
+-- Fix for saveEmployeeNote callback
+lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
+    local xPlayer, jobName = normalizeCallbackParams(source, job)
+    
+    if not xPlayer or xPlayer.getJob().name ~= jobName or xPlayer.getJob().grade_name ~= 'boss' then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    local success = pcall(function()
+        MySQL.Sync.execute(
+            "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
+            "ON DUPLICATE KEY UPDATE note = ?", 
+            {identifier, note, note}
+        )
+    end)
+    
+    if success then
+        return {success = true, message = "Poznámka byla úspěšně uložena"}
+    else
+        return {success = false, message = "Nepodařilo se uložit poznámku"}
     end
 end)
