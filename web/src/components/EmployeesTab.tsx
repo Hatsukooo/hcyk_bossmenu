@@ -232,10 +232,12 @@ const EmployeesTab: React.FC = () => {
   
   const handleOpenDetail = (employee: Employee) => {
     if (employee && employee.id) {
-      console.log('[HCYK_BOSSACTIONS] Opening detail for employee:', employee.id);
+      const employeeId = typeof employee.id === 'string' ? parseInt(employee.id, 10) : employee.id;
+      
+      console.log('[HCYK_BOSSACTIONS] Opening detail for employee:', employeeId);
       setSelectedEmployee({
         ...employee,
-        id: Number(employee.id)
+        id: employeeId
       });
       setActiveTab("historie");
       setShowDetailModal(true);

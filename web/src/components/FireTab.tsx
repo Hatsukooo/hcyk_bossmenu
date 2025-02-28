@@ -56,9 +56,20 @@ const FireTab: React.FC = () => {
       return;
     }
   
-    console.log('[HCYK_BOSSACTIONS] Opening fire confirmation for employee ID:', employee.id);
+    const employeeId = typeof employee.id === 'number' ? employee.id : parseInt(String(employee.id), 10);
     
-    setSelectedEmployee(employee);
+    if (isNaN(employeeId)) {
+      console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employee.id);
+      showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
+      return;
+    }
+    
+    console.log('[HCYK_BOSSACTIONS] Opening fire confirmation for employee ID:', employeeId);
+    
+    setSelectedEmployee({
+      ...employee,
+      id: employeeId
+    });
     setSeveranceAmount(Math.round(employee.salary / 2));
     setShowConfirmModal(true);
   };

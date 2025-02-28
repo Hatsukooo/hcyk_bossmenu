@@ -78,20 +78,20 @@ const HireTab: React.FC = () => {
     }
     
     try {
-      // Find the grade number for the selected position
       const selectedGrade = jobGrades.find(grade => grade.name === selectedPosition);
       if (!selectedGrade) {
         showNotification('error', 'Vybraná pozice není platná');
         return;
       }
       
-      // Use fetchWithFallback for consistency
+      const playerId = parseInt(selectedPlayer, 10);
+      
       const result = await fetchWithFallback<{success: boolean; message?: string}>(
         'hireEmployee', 
         {
-          player: selectedPlayer,
+          player: playerId, 
           job: getFallbackJob(),
-          position: selectedGrade.grade, // Send grade number instead of name
+          position: selectedGrade.grade,
           additionalInfo,
           salary: selectedGrade.salary
         }
@@ -99,7 +99,7 @@ const HireTab: React.FC = () => {
       
       if (result.success) {
         showNotification('success', 'Zaměstnanec byl úspěšně přijat');
-        // Reset form
+
         setSelectedPlayer("");
         setSelectedPosition("");
         setAdditionalInfo("");
