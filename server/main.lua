@@ -116,10 +116,13 @@ end)
 
 local playerSessions = {}
 
-AddEventHandler('playerJoining', function()
-    local src = source
-    local identifier = ESX.GetPlayerFromId(src).identifier
+RegisterNetEvent('esx:playerLoaded')
+AddEventHandler('esx:playerLoaded', function(source, xPlayer)
+    local src = source or xPlayer.source
+    local identifier = xPlayer.identifier
+    
     if identifier then
+        print("[HCYK_BOSSACTIONS] Player session started for: " .. identifier)
         playerSessions[src] = {
             identifier = identifier,
             startTime = os.time()
@@ -134,12 +137,28 @@ AddEventHandler('playerDropped', function()
         if duration > 60 then
             MySQL.Async.execute('INSERT INTO player_playtime (identifier, timestamp, duration) VALUES (?, ?, ?)',
                 {playerSessions[src].identifier, playerSessions[src].startTime, duration})
+            
+            print("[HCYK_BOSSACTIONS] Player session ended for: " .. playerSessions[src].identifier .. " (Duration: " .. duration .. " seconds)")
         end
         playerSessions[src] = nil
     end
 end)
 
 CreateThread(function()
+    Wait(5000)
+    
+    local players = ESX.GetPlayers()
+    for _, playerId in ipairs(players) do
+        local xPlayer = ESX.GetPlayerFromId(playerId)
+        if xPlayer and not playerSessions[playerId] then
+            print("[HCYK_BOSSACTIONS] Adding session for already connected player: " .. xPlayer.identifier)
+            playerSessions[playerId] = {
+                identifier = xPlayer.identifier,
+                startTime = os.time()
+            }
+        end
+    end
+    
     while true do
         Wait(900000)
         
@@ -150,6 +169,7 @@ CreateThread(function()
                 {session.identifier, session.startTime, duration})
                 
             playerSessions[src].startTime = currentTime
+            print("[HCYK_BOSSACTIONS] Updated playtime for: " .. session.identifier .. " (Duration: " .. duration .. " seconds)")
         end
     end
 end)
@@ -158,7 +178,6 @@ local function normalizeCallbackParams(source, job, ...)
     local xPlayer = ESX.GetPlayerFromId(source)
     local jobName = job
     
-    -- Handle different job parameter formats
     if type(job) == "table" then
         if job.job then
             jobName = job.job
@@ -170,7 +189,6 @@ local function normalizeCallbackParams(source, job, ...)
     return xPlayer, jobName, ...
 end
 
--- Fix for getEmployeesPlaytime callback
 lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, job)
     local xPlayer, jobName = normalizeCallbackParams(source, job)
     
@@ -211,7 +229,6 @@ lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, 
     return result
 end)
 
--- Fix for getEmployeeNote callback
 lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
     local xPlayer, jobName = normalizeCallbackParams(source, job)
     
@@ -230,7 +247,6 @@ lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, 
     end
 end)
 
--- Fix for saveEmployeeNote callback
 lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
     local xPlayer, jobName = normalizeCallbackParams(source, job)
     

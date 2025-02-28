@@ -122,12 +122,27 @@ export function isEmployeeBackend(emp: any): emp is EmployeeBackend {
 }
 
 export function convertBackendToEmployee(emp: EmployeeBackend): Employee {
+  let id: number;
+  
+  if (emp.identifier) {
+    if (typeof emp.identifier === 'number') {
+      id = emp.identifier;
+    } else if (typeof emp.identifier === 'string') {
+      const parsed = parseInt(emp.identifier, 10);
+      id = isNaN(parsed) ? 0 : parsed;
+    } else {
+      id = 0;
+    }
+  } else {
+    id = 0;
+  }
+  
   return {
-    id: Number(emp.identifier),
-    name: `${emp.firstname} ${emp.lastname}`,
-    role: emp.grade_name,
+    id: id,
+    name: `${emp.firstname || 'Unknown'} ${emp.lastname || ''}`.trim(),
+    role: emp.grade_name || 'Unknown',
     salary: emp.salary || 0,
-    level: emp.grade,
+    level: emp.grade || 0,
     weeklyPlaytime: emp.weeklyPlaytime || 0,
     performance: emp.performance || 75
   };

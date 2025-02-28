@@ -152,19 +152,34 @@ lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, ide
     end
 end)
 
+local function validateIdentifier(identifier)
+    if not identifier then
+        return nil
+    end
+    
+    identifier = tostring(identifier)
+    
+    if identifier == "" or identifier == "NaN" or identifier == "undefined" or identifier == "null" or identifier == "nil" then
+        return nil
+    end
+    
+    return identifier
+end
+
 lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, identifier)
     local xPlayer = ESX.GetPlayerFromId(source)
-    
-    print("Fire request: ", source, job, identifier)
-    print("Player job data: ", xPlayer.getJob().name, xPlayer.getJob().grade_name)
     
     if type(job) == "table" and job.job then
         job = job.job
     end
     
-    if type(identifier) == "number" then
-        identifier = tostring(identifier)
+    identifier = validateIdentifier(identifier)
+    if not identifier then
+        return {success = false, message = "Neplatný identifikátor zaměstnance"}
     end
+    
+    print("[HCYK_BOSSACTIONS] Fire request: ", source, job, identifier)
+    print("[HCYK_BOSSACTIONS] Player job data: ", xPlayer.getJob().name, xPlayer.getJob().grade_name)
     
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
@@ -319,38 +334,16 @@ lib.callback.register('hcyk_bossactions:getJobData', function(source, job)
     return jobData
 end)
 
-lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    
-    if type(identifier) == "number" then
-        identifier = tostring(identifier)
-    end
-    
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
-        return {success = false, message = "Nemáš oprávnění"}
-    end
-    
-    local success = false
-    
-    local result
-    local querySuccess = pcall(function()
-        result = MySQL.Sync.execute(
-            "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
-            "ON DUPLICATE KEY UPDATE note = ?", 
-            {identifier, note, note}
-        )
-    end)
-    
-    if querySuccess and result then
-        return {success = true, message = "Poznámka byla úspěšně uložena"}
-    else
-        print("Failed to save employee note for", identifier, "Error:", result)
-        return {success = false, message = "Nepodařilo se uložit poznámku"}
-    end
-end)
-
 lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
     local xPlayer = ESX.GetPlayerFromId(source)
+    if type(job) == "table" and job.job then
+        job = job.job
+    end
+    
+    identifier = validateIdentifier(identifier)
+    if not identifier then
+        return {success = false, message = "Neplatný identifikátor zaměstnance"}
+    end
     
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
@@ -362,6 +355,37 @@ lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, 
         return {success = true, note = result[1].note}
     else
         return {success = true, note = ""}
+    end
+end)
+
+lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    
+    if type(job) == "table" and job.job then
+        job = job.job
+    end
+    
+    identifier = validateIdentifier(identifier)
+    if not identifier then
+        return {success = false, message = "Neplatný identifikátor zaměstnance"}
+    end
+    
+    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    local success = pcall(function()
+        MySQL.Sync.execute(
+            "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
+            "ON DUPLICATE KEY UPDATE note = ?", 
+            {identifier, note, note}
+        )
+    end)
+    
+    if success then
+        return {success = true, message = "Poznámka byla úspěšně uložena"}
+    else
+        return {success = false, message = "Nepodařilo se uložit poznámku"}
     end
 end)
 

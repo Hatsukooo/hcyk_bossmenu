@@ -97,29 +97,32 @@ const EmployeesTab: React.FC = () => {
     fetchEmployees();
   }, []); 
   
-  // When a employee is selected, set the form data
   useEffect(() => {
     if (selectedEmployee) {
+      const employeeId = String(selectedEmployee.id);
+      
+      console.log("[HCYK_BOSSACTIONS] Selected employee:", employeeId);
+      
       setFormData({
         role: selectedEmployee.role,
         salary: selectedEmployee.salary,
-        note: employeeNotes[selectedEmployee.id.toString()] || ''
+        note: employeeNotes[employeeId] || ''
       });
       
-      // Fetch the employee's note if we don't have it already
-      if (!employeeNotes[selectedEmployee.id.toString()]) {
-        fetchEmployeeNote(selectedEmployee.id.toString());
+      if (!employeeNotes[employeeId]) {
+        fetchEmployeeNote(employeeId);
       }
     }
   }, [selectedEmployee, employeeNotes]);
   
-  // Function to fetch employee notes
   const fetchEmployeeNote = async (employeeId: string) => {
     try {
-      if (!employeeId || employeeId === 'NaN' || employeeId === 'undefined') {
-        console.error('Invalid employee ID:', employeeId);
+      if (!employeeId || employeeId === 'undefined' || employeeId === 'null' || employeeId === 'NaN') {
+        console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employeeId);
         return;
       }
+      
+      console.log('[HCYK_BOSSACTIONS] Fetching employee note for:', employeeId);
       
       const response = await fetchWithFallback<{success: boolean; note: string}>(
         'hcyk_bossactions:getEmployeeNote',
@@ -137,7 +140,7 @@ const EmployeesTab: React.FC = () => {
         }));
       }
     } catch (err) {
-      console.error('Error fetching employee note:', err);
+      console.error('[HCYK_BOSSACTIONS] Error fetching employee note:', err);
     }
   };
   
@@ -228,9 +231,17 @@ const EmployeesTab: React.FC = () => {
   };
   
   const handleOpenDetail = (employee: Employee) => {
-    setSelectedEmployee(employee);
-    setActiveTab("historie");
-    setShowDetailModal(true);
+    if (employee && employee.id) {
+      console.log('[HCYK_BOSSACTIONS] Opening detail for employee:', employee.id);
+      setSelectedEmployee({
+        ...employee,
+        id: Number(employee.id)
+      });
+      setActiveTab("historie");
+      setShowDetailModal(true);
+    } else {
+      console.error('[HCYK_BOSSACTIONS] Invalid employee data:', employee);
+    }
   };
   
   const filteredEmployees = employees.filter(emp => {
@@ -239,20 +250,16 @@ const EmployeesTab: React.FC = () => {
     return matchesSearch && matchesRole;
   });
   
-  // Get unique roles for filter dropdown
   const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
   
-  // Render loading state
   if (loading) return <div>Načítání zaměstnanců...</div>;
 
-  // Render error state
   if (error) return <div className="error-message">{error}</div>;
 
   return (
     <div className="tab-content">
       <h2>Zaměstnanci</h2>
       
-      {/* Filtr a vyhledávání */}
       <div className="filter-controls">
         <input 
           type="text" 
@@ -293,7 +300,6 @@ const EmployeesTab: React.FC = () => {
         ))}
       </div>
       
-      {/* Modální okno s detaily zaměstnance */}
       {showDetailModal && selectedEmployee && (
         <div className="modal-overlay">
           <div className="employee-detail-modal">

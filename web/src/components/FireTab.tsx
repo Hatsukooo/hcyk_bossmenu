@@ -50,6 +50,14 @@ const FireTab: React.FC = () => {
   }, []);
   
   const openConfirmModal = (employee: Employee) => {
+    if (!employee || !employee.id) {
+      console.error('[HCYK_BOSSACTIONS] Invalid employee:', employee);
+      showNotification('error', 'Chyba: Neplatný zaměstnanec');
+      return;
+    }
+  
+    console.log('[HCYK_BOSSACTIONS] Opening fire confirmation for employee ID:', employee.id);
+    
     setSelectedEmployee(employee);
     setSeveranceAmount(Math.round(employee.salary / 2));
     setShowConfirmModal(true);
@@ -60,9 +68,16 @@ const FireTab: React.FC = () => {
   
     try {
       const jobName = getFallbackJob();
-      console.log("Firing employee with job:", jobName);
       
-      const employeeId = selectedEmployee.id.toString();
+      const employeeId = String(selectedEmployee.id);
+      
+      if (!employeeId || employeeId === 'NaN' || employeeId === 'undefined') {
+        console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employeeId);
+        showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
+        return;
+      }
+      
+      console.log('[HCYK_BOSSACTIONS] Firing employee:', employeeId, 'from job:', jobName);
       
       const result = await fetchWithFallback<{success: boolean; message?: string}>(
         'fireEmployee', 
@@ -80,7 +95,7 @@ const FireTab: React.FC = () => {
         showNotification('error', result.message || 'Nepodařilo se propustit zaměstnance');
       }
     } catch (err) {
-      console.error('Chyba při propouštění:', err);
+      console.error('[HCYK_BOSSACTIONS] Error firing employee:', err);
       showNotification('error', 'Nastala chyba při propouštění');
     }
   };

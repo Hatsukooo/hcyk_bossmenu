@@ -69,22 +69,85 @@ RegisterNUICallback('hireEmployee', function(data, cb)
     end, data.job, data.player, data.position)
 end)
 
+local function safeToString(value)
+    if value == nil then
+        return "nil"
+    elseif type(value) == "number" and (value ~= value or value == math.huge or value == -math.huge) then
+        -- Check for NaN or infinity
+        return tostring(0)
+    else
+        return tostring(value)
+    end
+end
+
+-- Improve the fireEmployee callback
 RegisterNUICallback('fireEmployee', function(data, cb)
-    debugPrint('Firing employee from job', data.job, 'ID', data.identifier)
+    -- Ensure job is properly formatted
+    local job = data.job
+    if type(job) == "table" and job.job then
+        job = job.job
+    end
     
+    -- Ensure identifier is a valid string
+    local identifier = data.identifier
+    if type(identifier) == "number" or identifier == "NaN" or identifier == "undefined" or identifier == "null" then
+        identifier = safeToString(identifier)
+    end
+    
+    debugPrint('Firing employee from job', job, 'ID', identifier)
+    
+    -- Validate data before sending
+    if not job or job == "" or not identifier or identifier == "" or identifier == "NaN" or identifier == "undefined" or identifier == "null" then
+        cb({success = false, message = "Neplatné údaje"})
+        return
+    end
+    
+    lib.callback('hcyk_bossactions:fireEmployee', 1000, function(result)
+        cb(result or {success = false, message = "Unknown error"})
+    end, job, identifier)
+end)
+
+RegisterNUICallback('getEmployeeNote', function(data, cb)
+    data = normalizeJobParameter(data)
+    
+    local identifier = data.identifier
+    if type(identifier) == "number" or identifier == "NaN" or identifier == "undefined" or identifier == "null" then
+        identifier = safeToString(identifier)
+    end
+    
+    debugPrint('Fetching employee note for', identifier)
+    
+    if not identifier or identifier == "" or identifier == "NaN" or identifier == "undefined" or identifier == "null" then
+        cb({success = false, note = ""})
+        return
+    end
+    
+    lib.callback('hcyk_bossactions:getEmployeeNote', false, function(result)
+        cb(result or {success = false, note = ""})
+    end, data.job, identifier)
+end)
+
+RegisterNUICallback('saveEmployeeNote', function(data, cb)
     local job = data.job
     if type(job) == "table" and job.job then
         job = job.job
     end
     
     local identifier = data.identifier
-    if type(identifier) == "number" then
-        identifier = tostring(identifier)
+    if type(identifier) == "number" or identifier == "NaN" or identifier == "undefined" or identifier == "null" then
+        identifier = safeToString(identifier)
     end
     
-    lib.callback('hcyk_bossactions:fireEmployee', 1000, function(result)
+    debugPrint('Saving note for employee', identifier, 'job', job)
+    
+    if not identifier or identifier == "" or identifier == "NaN" or identifier == "undefined" or identifier == "null" then
+        cb({success = false, message = "Neplatný identifikátor zaměstnance"})
+        return
+    end
+    
+    lib.callback('hcyk_bossactions:saveEmployeeNote', 1000, function(result)
         cb(result or {success = false, message = "Unknown error"})
-    end, job, identifier)
+    end, job, identifier, data.note)
 end)
 
 RegisterNUICallback('setGrade', function(data, cb)
