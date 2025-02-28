@@ -57,22 +57,22 @@ const FireTab: React.FC = () => {
   
   const handleFire = async () => {
     if (!selectedEmployee) return;
-
+  
     try {
       const jobName = getFallbackJob();
       console.log("Firing employee with job:", jobName);
       
-      // Use fetchWithFallback for consistency and fix parameter name
+      const employeeId = selectedEmployee.id.toString();
+      
       const result = await fetchWithFallback<{success: boolean; message?: string}>(
         'fireEmployee', 
         {
           job: jobName,
-          identifier: selectedEmployee.id.toString() // Ensure identifier is a string
+          identifier: employeeId
         }
       );
       
       if (result.success) {
-        // Remove employee from list
         setEmployees(prev => prev.filter(emp => emp.id !== selectedEmployee.id));
         setShowConfirmModal(false);
         showNotification('success', 'Zaměstnanec byl úspěšně propuštěn');

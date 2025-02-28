@@ -116,13 +116,18 @@ const EmployeesTab: React.FC = () => {
   // Function to fetch employee notes
   const fetchEmployeeNote = async (employeeId: string) => {
     try {
+      if (!employeeId || employeeId === 'NaN' || employeeId === 'undefined') {
+        console.error('Invalid employee ID:', employeeId);
+        return;
+      }
+      
       const response = await fetchWithFallback<{success: boolean; note: string}>(
         'hcyk_bossactions:getEmployeeNote',
         {
           job: getFallbackJob(),
           identifier: employeeId
         },
-        true // Use mock data if fetch fails
+        true
       );
       
       if (response.success) {

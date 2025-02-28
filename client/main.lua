@@ -3,6 +3,17 @@ ESX = exports["es_extended"]:getSharedObject()
 menuOpen = false  
 local PlayerData = {}
 
+local function normalizeJobParameter(data)
+    if type(data) == "table" and data.job then
+        if type(data.job) == "table" and data.job.job then
+            data.job = data.job.job
+        elseif type(data.job) == "table" and data.job.name then
+            data.job = data.job.name
+        end
+    end
+    return data
+end
+
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
     PlayerData = xPlayer
@@ -35,15 +46,6 @@ CreateThread(function()
     loadBossZones()
 end)
 
--- Common helper function to handle job parameter format
-local function normalizeJobParameter(data)
-    if type(data.job) == "table" and data.job.job then
-        data.job = data.job.job
-    end
-    return data
-end
-
--- Employee-related callbacks
 RegisterNUICallback('getEmployees', function(data, cb)
     debugPrint('Fetching employees for job', data.job)
     data = normalizeJobParameter(data)
