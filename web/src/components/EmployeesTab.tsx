@@ -1,17 +1,10 @@
-// Fixed EmployeesTab.tsx with proper TypeScript typing
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
-// Import types and functions from our TypeScript utility file
-import { 
-  safelyExtractEmployeeId, 
-  convertEmployeeData, 
-  Employee, 
-  RawEmployee 
-} from '../utils/employee-data-fix';
 
-// Type for history items
+import { safelyExtractEmployeeId, convertEmployeeData, Employee, RawEmployee } from '../utils/employee-data-fix';
+
 interface HistoryItem {
   date: string;
   type: string;
@@ -19,12 +12,10 @@ interface HistoryItem {
   note: string;
 }
 
-// Type for employee history
 interface EmployeeHistory {
   [key: number]: HistoryItem[];
 }
 
-// Mock data histories (will be replaced with real data when available)
 const employeeHistory: EmployeeHistory = {
   1: [
     { date: '15.1.2025', type: 'Prémie', amount: '+$200', note: 'Splnění kvartálního cíle' },
@@ -43,7 +34,6 @@ const employeeHistory: EmployeeHistory = {
 };
 
 const EmployeesTab: React.FC = () => {
-  // States
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -62,7 +52,37 @@ const EmployeesTab: React.FC = () => {
   const { showNotification } = useNotification();
   const { showDialog } = useDialog();
 
-  // Fetch employees from backend
+  const safelyFetchData = async <T,>(
+    endpoint: string,
+    data: any,
+    defaultValue: T
+  ): Promise<T> => {
+    try {
+      const response = await fetch(`https://hcyk_bossmenu/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        console.warn(`[DEBUG] Empty response from ${endpoint}`);
+        return defaultValue;
+      }
+
+      try {
+        return JSON.parse(text) as T;
+      } catch (e) {
+        console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
+        console.error(`[DEBUG] Attempted to parse:`, text);
+        return defaultValue;
+      }
+    } catch (error) {
+      console.warn(`[DEBUG] Error fetching ${endpoint}:`, error);
+      return defaultValue;
+    }
+  };
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -72,11 +92,10 @@ const EmployeesTab: React.FC = () => {
         const job = getFallbackJob();
         console.log('[DEBUG] Fetching employees for job:', job);
         
-        // Fetch basic employee data
         const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
           { job }, 
-          true // Use mock data if fetch fails
+          true 
         );
         
         console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
@@ -86,16 +105,14 @@ const EmployeesTab: React.FC = () => {
           return;
         }
         
-        // Fetch weekly playtime for all employees
         const playtimeData = await fetchWithFallback<{[key: string]: number}>(
           'hcyk_bossactions:getEmployeesPlaytime',
           { job },
-          true // Use mock data if fetch fails
+          true
         );
         
         console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
         
-        // Transform backend data to frontend Employee type using our improved converter
         const formattedEmployees = data.map(emp => {
           console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
           const convertedEmp = convertEmployeeData(emp);
@@ -128,7 +145,6 @@ const EmployeesTab: React.FC = () => {
     if (selectedEmployee) {
       console.log('[DEBUG] Selected employee in useEffect:', JSON.stringify(selectedEmployee));
       
-      // Safely extract the employee ID
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
       if (!employeeId) {
@@ -136,7 +152,6 @@ const EmployeesTab: React.FC = () => {
         return;
       }
       
-      // Convert to string for consistency with object keys
       const employeeIdString = String(employeeId);
       
       console.log("[DEBUG] Selected employee ID after processing:", employeeIdString);
@@ -162,48 +177,24 @@ const EmployeesTab: React.FC = () => {
       
       console.log('[DEBUG] Fetching employee note for:', employeeId);
       
-      let attempts = 0;
-      let response;
-      
-      while (attempts < 3) {
-        try {
-          response = await fetchWithFallback<{success: boolean; note: string}>(
-            'hcyk_bossactions:getEmployeeNote',
-            {
-              job: getFallbackJob(),
-              identifier: employeeId
-            },
-            true
-          );
-          
-          if (response && response.success !== undefined) {
-            break;
-          }
-        } catch (err) {
-          console.warn(`[DEBUG] Attempt ${attempts + 1} failed:`, err);
-        }
-        
-        attempts++;
-        if (attempts < 3) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+      const response = await safelyFetchData<{success: boolean; note: string}>(
+        'hcyk_bossactions:getEmployeeNote',
+        {
+          job: getFallbackJob(),
+          identifier: employeeId
+        },
+        { success: true, note: '' } 
+      );
       
       console.log('[DEBUG] Employee note response:', JSON.stringify(response));
       
-      if (response && response.success) {
-        setEmployeeNotes(prev => ({
-          ...prev,
-          [employeeId]: response.note || ''
-        }));
-      } else {
-        setEmployeeNotes(prev => ({
-          ...prev,
-          [employeeId]: ''
-        }));
-      }
+      setEmployeeNotes(prev => ({
+        ...prev,
+        [employeeId]: response.note || ''
+      }));
     } catch (err) {
       console.error('[DEBUG] Error fetching employee note:', err);
+
       setEmployeeNotes(prev => ({
         ...prev,
         [employeeId]: ''

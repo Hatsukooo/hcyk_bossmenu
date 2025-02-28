@@ -165,35 +165,30 @@ export interface RawEmployee {
     }
   }
 
-  // Add this function to employee-data-fix.js/ts
-export function safeJsonParse(text) {
-  if (!text || text.trim() === '') return {};
+export function safeJsonParse<T>(text: string): T {
+  if (!text || text.trim() === '') return {} as T;
   
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as T;
   } catch (e) {
     console.error('[DEBUG] JSON parse error:', e);
     console.error('[DEBUG] Attempted to parse:', text);
-    return {};
+    return {} as T;
   }
 }
 
-// Then modify your fetchWithFallback function in api.ts to use it:
 export const fetchWithFallback = async <T = any>(
   endpoint: string,
   data: any,
   useMock: boolean = false
 ): Promise<T> => {
-  // Ensure data is an object
   data = data || {};
   
-  // If data contains a job field, ensure it's properly formatted
   if (data && data.job) {
     data.job = ensureJobString(data.job);
   }
   
   try {
-    // Remove any prefix from endpoint if it exists
     const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
     
     const response = await fetch(`https://hcyk_bossmenu/${cleanEndpoint}`, {
@@ -202,21 +197,18 @@ export const fetchWithFallback = async <T = any>(
       body: JSON.stringify(data)
     });
 
-    // For empty responses, return an empty object
     const text = await response.text();
     if (!text) {
       console.warn(`[DEBUG] Empty response from ${endpoint}`);
       return {} as T;
     }
 
-    // Use our safe JSON parser
     return safeJsonParse(text) as T;
   } catch (error) {
     console.warn(`[DEBUG] Error fetching ${endpoint}, ${useMock ? 'using mock data' : 'throwing error'}:`, error);
     
     if (useMock) {
       console.info(`[DEBUG] Using mock data for ${endpoint}`);
-      // Get the endpoint name without any prefix
       const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
       return getMockData(cleanEndpoint, data) as T;
     }
@@ -224,3 +216,4 @@ export const fetchWithFallback = async <T = any>(
     throw error;
   }
 };
+

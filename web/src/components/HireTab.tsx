@@ -27,6 +27,39 @@ const HireTab: React.FC = () => {
   const [additionalInfo, setAdditionalInfo] = useState<string>("");
   const { showNotification } = useNotification();
 
+  const safelyFetchData = async <T,>(
+    endpoint: string,
+    data: any,
+    defaultValue: T
+  ): Promise<T> => {
+    try {
+      const response = await fetch(`https://hcyk_bossmenu/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      // For empty responses, return the default value
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        console.warn(`[DEBUG] Empty response from ${endpoint}`);
+        return defaultValue;
+      }
+
+      // Safely parse JSON
+      try {
+        return JSON.parse(text) as T;
+      } catch (e) {
+        console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
+        console.error(`[DEBUG] Attempted to parse:`, text);
+        return defaultValue;
+      }
+    } catch (error) {
+      console.warn(`[DEBUG] Error fetching ${endpoint}:`, error);
+      return defaultValue;
+    }
+  };
+
   // Fetch nearby players when component mounts
   useEffect(() => {
     const fetchData = async () => {
@@ -88,51 +121,27 @@ const HireTab: React.FC = () => {
       
       const playerId = parseInt(selectedPlayer, 10);
       
-      console.log('[DEBUG] Hire request data:', {
-        player: playerId, 
-        job: getFallbackJob(),
-        position: selectedGrade.grade,
-        additionalInfo,
-        salary: selectedGrade.salary
-      });
-      
-      let attempts = 0;
-      let result;
-      
-      while (attempts < 3) {
-        try {
-          result = await fetchWithFallback<{success: boolean; message?: string}>(
-            'hireEmployee', 
-            {
-              player: playerId, 
-              job: getFallbackJob(),
-              position: selectedGrade.grade,
-              additionalInfo,
-              salary: selectedGrade.salary
-            }
-          );
-          
-          if (result) break;
-        } catch (err) {
-          console.warn(`[DEBUG] Hire attempt ${attempts + 1} failed:`, err);
-        }
-        
-        attempts++;
-        if (attempts < 3) {
-          await new Promise(resolve => setTimeout(resolve, 500)); 
-        }
-      }
+      const result = await safelyFetchData<{success: boolean; message?: string}>(
+        'hireEmployee',
+        {
+          player: playerId, 
+          job: getFallbackJob(),
+          position: selectedGrade.grade,
+          additionalInfo,
+          salary: selectedGrade.salary
+        },
+        { success: false, message: 'Failed to receive response from server' }
+      );
       
       console.log('[DEBUG] Hire response:', result);
       
-      if (result && result.success) {
+      if (result.success) {
         showNotification('success', 'Zaměstnanec byl úspěšně přijat');
-  
         setSelectedPlayer("");
         setSelectedPosition("");
         setAdditionalInfo("");
       } else {
-        showNotification('error', result?.message || 'Nepodařilo se přijmout zaměstnance');
+        showNotification('error', result.message || 'Nepodařilo se přijmout zaměstnance');
       }
     } catch (err) {
       console.error('[DEBUG] Error hiring employee:', err);
