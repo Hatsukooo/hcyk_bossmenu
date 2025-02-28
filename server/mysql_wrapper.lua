@@ -2,14 +2,12 @@ ESX = exports["es_extended"]:getSharedObject()
 
 SafeMySQL = {}
 
--- Log function with optional debug flag
 local function logError(message, ...)
     local args = {...}
     local formatted = string.format(message, table.unpack(args))
     print('^1[HCYK_BOSSACTIONS] ERROR: ' .. formatted .. '^7')
 end
 
--- Safely execute a MySQL fetch operation with error handling
 SafeMySQL.fetch = function(query, params, defaultReturn)
     defaultReturn = defaultReturn or {}
     
@@ -25,7 +23,6 @@ SafeMySQL.fetch = function(query, params, defaultReturn)
     return result or defaultReturn
 end
 
--- Safely execute a MySQL scalar operation with error handling
 SafeMySQL.scalar = function(query, params, defaultReturn)
     defaultReturn = defaultReturn or 0
     
@@ -41,7 +38,6 @@ SafeMySQL.scalar = function(query, params, defaultReturn)
     return result or defaultReturn
 end
 
--- Safely execute a MySQL execute operation (INSERT, UPDATE, DELETE) with error handling
 SafeMySQL.execute = function(query, params, defaultReturn)
     defaultReturn = defaultReturn or 0
     
@@ -57,7 +53,6 @@ SafeMySQL.execute = function(query, params, defaultReturn)
     return result or defaultReturn
 end
 
--- Safely execute a MySQL insert operation with error handling
 SafeMySQL.insert = function(query, params, defaultReturn)
     defaultReturn = defaultReturn or 0
     
@@ -73,7 +68,6 @@ SafeMySQL.insert = function(query, params, defaultReturn)
     return result or defaultReturn
 end
 
--- For async operations
 SafeMySQL.fetchAsync = function(query, params, callback)
     MySQL.Async.fetchAll(query, params, function(result)
         callback(result or {})
