@@ -64,9 +64,27 @@ end)
 RegisterNUICallback('hireEmployee', function(data, cb)
     debugPrint('Hiring employee for job', data.job, 'position', data.position)
     
+    if not data.job or not data.player or not data.position then
+        cb({success = false, message = "Neúplná data pro přijetí zaměstnance"})
+        return
+    end
+    
+    local player = tonumber(data.player)
+    local position = tonumber(data.position)
+    
+    if not player or not position then
+        cb({success = false, message = "Neplatné ID hráče nebo pozice"})
+        return
+    end
+    
     lib.callback('hcyk_bossactions:hireEmployee', 1000, function(result)
-        cb(result or {success = false, message = "Unknown error"})
-    end, data.job, data.player, data.position)
+        if not result then
+            cb({success = false, message = "Došlo k chybě při přijímání zaměstnance"})
+            return
+        end
+        
+        cb(result)
+    end, data.job, player, position)
 end)
 
 local function safeToString(value)
