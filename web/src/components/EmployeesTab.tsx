@@ -1,8 +1,13 @@
+// Fixed EmployeesTab.jsx or EmployeesTab.tsx
+// Save this in your web/src/components directory, replacing the original file
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Employee, EmployeeHistory, EmployeeBackend } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
+// Import our new helper functions
+import { safelyExtractEmployeeId, convertEmployeeData } from '../utils/employee-data-fix';
 
 // Mock data histories (will be replaced with real data when available)
 const employeeHistory: EmployeeHistory = {
@@ -22,18 +27,18 @@ const employeeHistory: EmployeeHistory = {
   ]
 };
 
-const EmployeesTab: React.FC = () => {
+const EmployeesTab = () => {
   // States
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>("historie");
-  const [formChanged, setFormChanged] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [employeeNotes, setEmployeeNotes] = useState<{[key: string]: string}>({});
+  const [employees, setEmployees] = useState([]);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [activeTab, setActiveTab] = useState("historie");
+  const [formChanged, setFormChanged] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [employeeNotes, setEmployeeNotes] = useState({});
   const [formData, setFormData] = useState({
     role: '',
     salary: 0,
@@ -52,7 +57,7 @@ const EmployeesTab: React.FC = () => {
         const job = getFallbackJob();
         
         // Fetch basic employee data
-        const data = await fetchWithFallback<EmployeeBackend[]>(
+        const data = await fetchWithFallback(
           'getEmployees', 
           { job }, 
           true // Use mock data if fetch fails
@@ -64,24 +69,21 @@ const EmployeesTab: React.FC = () => {
         }
         
         // Fetch weekly playtime for all employees
-        const playtimeData = await fetchWithFallback<{[key: string]: number}>(
+        const playtimeData = await fetchWithFallback(
           'hcyk_bossactions:getEmployeesPlaytime',
           { job },
           true // Use mock data if fetch fails
         );
         
-        // Transform backend data to frontend Employee type
-        const formattedEmployees: Employee[] = data.map(emp => {
-          const identifier = emp.identifier.toString();
+        // Transform backend data to frontend Employee type using our improved converter
+        const formattedEmployees = data.map(emp => {
+          const convertedEmp = convertEmployeeData(emp);
+          const identifier = safelyExtractEmployeeId(emp);
           const weeklyPlaytime = playtimeData && playtimeData[identifier] ? playtimeData[identifier] : 0;
           
           return {
-            id: Number(identifier), 
-            name: `${emp.firstname} ${emp.lastname}`,
-            role: emp.grade_name,
-            salary: emp.salary || 0,
-            weeklyPlaytime: weeklyPlaytime,
-            level: emp.grade
+            ...convertedEmp,
+            weeklyPlaytime: weeklyPlaytime
           };
         });
        
@@ -99,23 +101,32 @@ const EmployeesTab: React.FC = () => {
   
   useEffect(() => {
     if (selectedEmployee) {
-      const employeeId = String(selectedEmployee.id);
+      // Safely extract the employee ID
+      const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
-      console.log("[HCYK_BOSSACTIONS] Selected employee:", employeeId);
+      if (!employeeId) {
+        console.error("[HCYK_BOSSACTIONS] Invalid employee ID:", selectedEmployee);
+        return;
+      }
+      
+      // Convert to string for consistency with object keys
+      const employeeIdString = String(employeeId);
+      
+      console.log("[HCYK_BOSSACTIONS] Selected employee:", employeeIdString);
       
       setFormData({
         role: selectedEmployee.role,
         salary: selectedEmployee.salary,
-        note: employeeNotes[employeeId] || ''
+        note: employeeNotes[employeeIdString] || ''
       });
       
-      if (!employeeNotes[employeeId]) {
-        fetchEmployeeNote(employeeId);
+      if (!employeeNotes[employeeIdString]) {
+        fetchEmployeeNote(employeeIdString);
       }
     }
   }, [selectedEmployee, employeeNotes]);
   
-  const fetchEmployeeNote = async (employeeId: string) => {
+  const fetchEmployeeNote = async (employeeId) => {
     try {
       if (!employeeId || employeeId === 'undefined' || employeeId === 'null' || employeeId === 'NaN') {
         console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employeeId);
@@ -124,7 +135,7 @@ const EmployeesTab: React.FC = () => {
       
       console.log('[HCYK_BOSSACTIONS] Fetching employee note for:', employeeId);
       
-      const response = await fetchWithFallback<{success: boolean; note: string}>(
+      const response = await fetchWithFallback(
         'hcyk_bossactions:getEmployeeNote',
         {
           job: getFallbackJob(),
@@ -145,7 +156,7 @@ const EmployeesTab: React.FC = () => {
   };
   
   // Handler for form changes
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -167,7 +178,7 @@ const EmployeesTab: React.FC = () => {
             setFormData({
               role: selectedEmployee.role,
               salary: selectedEmployee.salary,
-              note: employeeNotes[selectedEmployee.id.toString()] || ''
+              note: employeeNotes[safelyExtractEmployeeId(selectedEmployee)] || ''
             });
           }
           setFormChanged(false);
@@ -181,13 +192,21 @@ const EmployeesTab: React.FC = () => {
   
   const handleSaveChanges = async () => {
     if (!selectedEmployee) return;
+    
+    // Safely extract the employee ID
+    const employeeId = safelyExtractEmployeeId(selectedEmployee);
+    
+    if (!employeeId) {
+      showNotification('error', 'Neplatný identifikátor zaměstnance');
+      return;
+    }
   
     try {
       const noteResponse = await fetchWithFallback(
         'saveEmployeeNote', 
         {
           job: getFallbackJob(),
-          identifier: selectedEmployee.id.toString(),
+          identifier: employeeId,
           note: formData.note
         }
       );
@@ -200,7 +219,7 @@ const EmployeesTab: React.FC = () => {
       const detailsResponse = await fetchWithFallback(
         'setEmployeeDetails', 
         {
-          identifier: selectedEmployee.id,
+          identifier: employeeId,
           job: getFallbackJob(),
           level: selectedEmployee.level,
           salary: formData.salary
@@ -209,14 +228,14 @@ const EmployeesTab: React.FC = () => {
   
       if (detailsResponse.success) {
         setEmployees(prev => prev.map(emp => 
-          emp.id === selectedEmployee.id 
+          safelyExtractEmployeeId(emp) === employeeId 
             ? {...emp, role: formData.role, salary: formData.salary} 
             : emp
         ));
         
         setEmployeeNotes(prev => ({
           ...prev,
-          [selectedEmployee.id.toString()]: formData.note
+          [employeeId]: formData.note
         }));
         
         setFormChanged(false);
@@ -230,20 +249,19 @@ const EmployeesTab: React.FC = () => {
     }
   };
   
-  const handleOpenDetail = (employee: Employee) => {
-    if (employee && employee.id) {
-      const employeeId = typeof employee.id === 'string' ? parseInt(employee.id, 10) : employee.id;
-      
-      console.log('[HCYK_BOSSACTIONS] Opening detail for employee:', employeeId);
-      setSelectedEmployee({
-        ...employee,
-        id: employeeId
-      });
-      setActiveTab("historie");
-      setShowDetailModal(true);
-    } else {
+  const handleOpenDetail = (employee) => {
+    if (!employee) {
       console.error('[HCYK_BOSSACTIONS] Invalid employee data:', employee);
+      return;
     }
+    
+    // Create a clean copy of the employee data
+    const cleanEmployee = convertEmployeeData(employee);
+    
+    console.log('[HCYK_BOSSACTIONS] Opening detail for employee:', cleanEmployee.id);
+    setSelectedEmployee(cleanEmployee);
+    setActiveTab("historie");
+    setShowDetailModal(true);
   };
   
   const filteredEmployees = employees.filter(emp => {
@@ -284,7 +302,7 @@ const EmployeesTab: React.FC = () => {
       
       <div className="employees-list">
         {filteredEmployees.map(emp => (
-          <div key={emp.id} className="employee-card">
+          <div key={safelyExtractEmployeeId(emp)} className="employee-card">
             <div className="employee-info">
               <div className="employee-header">
                 <h3>{emp.name}</h3>
@@ -358,7 +376,7 @@ const EmployeesTab: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {employeeHistory[selectedEmployee.id]?.map((item, index) => (
+                          {employeeHistory[safelyExtractEmployeeId(selectedEmployee)]?.map((item, index) => (
                             <tr key={index}>
                               <td>{item.date}</td>
                               <td>
@@ -370,7 +388,7 @@ const EmployeesTab: React.FC = () => {
                               <td>{item.note}</td>
                             </tr>
                           ))}
-                          {!employeeHistory[selectedEmployee.id] && (
+                          {!employeeHistory[safelyExtractEmployeeId(selectedEmployee)] && (
                             <tr>
                               <td colSpan={4} className="no-data">Žádná historie nenalezena</td>
                             </tr>

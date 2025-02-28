@@ -1,17 +1,21 @@
+// Fixed FireTab.jsx or FireTab.tsx
+// Save this in your web/src/components directory, replacing the original file
+
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { Employee, EmployeeBackend, convertBackendToEmployee } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
+// Import our new helper functions
+import { safelyExtractEmployeeId, convertEmployeeData } from '../utils/employee-data-fix';
 
-const FireTab: React.FC = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+const FireTab = () => {
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [severanceAmount, setSeveranceAmount] = useState<number>(0);
+  const [error, setError] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [severanceAmount, setSeveranceAmount] = useState(0);
   const { showNotification } = useNotification();
   const { showDialog } = useDialog();
   
@@ -25,7 +29,7 @@ const FireTab: React.FC = () => {
         console.log("Fetching employees for job:", jobName);
         
         // Use the fetchWithFallback utility for consistency
-        const data = await fetchWithFallback<EmployeeBackend[]>(
+        const data = await fetchWithFallback(
           'getEmployees', 
           { job: jobName },
           true // Use mock data if fetch fails
@@ -34,8 +38,8 @@ const FireTab: React.FC = () => {
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
         } else {
-          // Transform backend data to frontend Employee type using the convertBackendToEmployee function
-          const formattedEmployees = data.map(emp => convertBackendToEmployee(emp));
+          // Transform backend data to frontend Employee type using our improved converter
+          const formattedEmployees = data.map(emp => convertEmployeeData(emp));
           setEmployees(formattedEmployees);
         }
       } catch (err) {
@@ -49,28 +53,27 @@ const FireTab: React.FC = () => {
     fetchEmployees();
   }, []);
   
-  const openConfirmModal = (employee: Employee) => {
-    if (!employee || !employee.id) {
+  const openConfirmModal = (employee) => {
+    if (!employee) {
       console.error('[HCYK_BOSSACTIONS] Invalid employee:', employee);
       showNotification('error', 'Chyba: Neplatný zaměstnanec');
       return;
     }
   
-    const employeeId = typeof employee.id === 'number' ? employee.id : parseInt(String(employee.id), 10);
+    // Convert the employee data to ensure it's in the right format
+    const cleanEmployee = convertEmployeeData(employee);
+    const employeeId = safelyExtractEmployeeId(cleanEmployee);
     
-    if (isNaN(employeeId)) {
-      console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employee.id);
+    if (!employeeId) {
+      console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employee);
       showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
       return;
     }
     
     console.log('[HCYK_BOSSACTIONS] Opening fire confirmation for employee ID:', employeeId);
     
-    setSelectedEmployee({
-      ...employee,
-      id: employeeId
-    });
-    setSeveranceAmount(Math.round(employee.salary / 2));
+    setSelectedEmployee(cleanEmployee);
+    setSeveranceAmount(Math.round(cleanEmployee.salary / 2));
     setShowConfirmModal(true);
   };
   
@@ -80,17 +83,18 @@ const FireTab: React.FC = () => {
     try {
       const jobName = getFallbackJob();
       
-      const employeeId = String(selectedEmployee.id);
+      // Extract the employee ID safely
+      const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
-      if (!employeeId || employeeId === 'NaN' || employeeId === 'undefined') {
-        console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employeeId);
+      if (!employeeId) {
+        console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', selectedEmployee);
         showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
         return;
       }
       
       console.log('[HCYK_BOSSACTIONS] Firing employee:', employeeId, 'from job:', jobName);
       
-      const result = await fetchWithFallback<{success: boolean; message?: string}>(
+      const result = await fetchWithFallback(
         'fireEmployee', 
         {
           job: jobName,
@@ -99,7 +103,10 @@ const FireTab: React.FC = () => {
       );
       
       if (result.success) {
-        setEmployees(prev => prev.filter(emp => emp.id !== selectedEmployee.id));
+        // Use the safelyExtractEmployeeId function to filter the employees array
+        setEmployees(prev => prev.filter(emp => 
+          safelyExtractEmployeeId(emp) !== employeeId
+        ));
         setShowConfirmModal(false);
         showNotification('success', 'Zaměstnanec byl úspěšně propuštěn');
       } else {
@@ -119,7 +126,7 @@ const FireTab: React.FC = () => {
       <h2>Propustit</h2>
       <div className="employees-list">
         {employees.map(emp => (
-          <div key={emp.id} className="employee-card">
+          <div key={safelyExtractEmployeeId(emp)} className="employee-card">
             <div className="employee-info">
               <h3>{emp.name}</h3>
               <p>Pozice: {emp.role}</p>
