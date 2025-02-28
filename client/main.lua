@@ -255,13 +255,14 @@ RegisterNUICallback('showNotification', function(data, cb)
     local message = data.message or ''
     
     if type == 'success' then
-        ESX.ShowNotification(message)
+        print("ESX.ShowNotification(".. message..")")
     elseif type == 'error' then
-        ESX.ShowNotification('~r~' .. message)
+        
+        print("ESX.ShowNotification('~r~' ".. message..")")
     elseif type == 'warning' then
-        ESX.ShowNotification('~y~' .. message)
+        print("ESX.ShowNotification('~y~' ".. message..")")
     else
-        ESX.ShowNotification(message)
+        print("ESX.ShowNotification(".. message..")")
     end
     
     cb({success = true})
