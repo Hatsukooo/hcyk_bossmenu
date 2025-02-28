@@ -1,13 +1,28 @@
-// Fixed EmployeesTab.jsx or EmployeesTab.tsx
-// Save this in your web/src/components directory, replacing the original file
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Employee, EmployeeHistory, EmployeeBackend } from '../types';
+// Fixed EmployeesTab.tsx with proper TypeScript typing
+import React, { useState, useEffect } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
-// Import our new helper functions
-import { safelyExtractEmployeeId, convertEmployeeData } from '../utils/employee-data-fix';
+// Import types and functions from our TypeScript utility file
+import { 
+  safelyExtractEmployeeId, 
+  convertEmployeeData, 
+  Employee, 
+  RawEmployee 
+} from '../utils/employee-data-fix';
+
+// Type for history items
+interface HistoryItem {
+  date: string;
+  type: string;
+  amount: string;
+  note: string;
+}
+
+// Type for employee history
+interface EmployeeHistory {
+  [key: number]: HistoryItem[];
+}
 
 // Mock data histories (will be replaced with real data when available)
 const employeeHistory: EmployeeHistory = {
@@ -27,18 +42,18 @@ const employeeHistory: EmployeeHistory = {
   ]
 };
 
-const EmployeesTab = () => {
+const EmployeesTab: React.FC = () => {
   // States
-  const [employees, setEmployees] = useState([]);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [activeTab, setActiveTab] = useState("historie");
-  const [formChanged, setFormChanged] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [employeeNotes, setEmployeeNotes] = useState({});
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>("historie");
+  const [formChanged, setFormChanged] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [employeeNotes, setEmployeeNotes] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState({
     role: '',
     salary: 0,
@@ -55,13 +70,16 @@ const EmployeesTab = () => {
         setError(null);
         
         const job = getFallbackJob();
+        console.log('[DEBUG] Fetching employees for job:', job);
         
         // Fetch basic employee data
-        const data = await fetchWithFallback(
+        const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
           { job }, 
           true // Use mock data if fetch fails
         );
+        
+        console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
        
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
@@ -69,27 +87,34 @@ const EmployeesTab = () => {
         }
         
         // Fetch weekly playtime for all employees
-        const playtimeData = await fetchWithFallback(
+        const playtimeData = await fetchWithFallback<{[key: string]: number}>(
           'hcyk_bossactions:getEmployeesPlaytime',
           { job },
           true // Use mock data if fetch fails
         );
         
+        console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
+        
         // Transform backend data to frontend Employee type using our improved converter
         const formattedEmployees = data.map(emp => {
+          console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
           const convertedEmp = convertEmployeeData(emp);
           const identifier = safelyExtractEmployeeId(emp);
-          const weeklyPlaytime = playtimeData && playtimeData[identifier] ? playtimeData[identifier] : 0;
+          console.log('[DEBUG] Extracted identifier:', identifier);
+          const weeklyPlaytime = playtimeData && identifier && playtimeData[String(identifier)] 
+            ? playtimeData[String(identifier)] 
+            : 0;
           
           return {
             ...convertedEmp,
-            weeklyPlaytime: weeklyPlaytime
+            weeklyPlaytime
           };
         });
-       
+        
+        console.log('[DEBUG] Formatted employees:', JSON.stringify(formattedEmployees));
         setEmployees(formattedEmployees);
       } catch (err) {
-        console.error('Chyba při načítání zaměstnanců:', err);
+        console.error('[DEBUG] Error fetching employees:', err);
         setError('Chyba při načítání zaměstnanců');
       } finally {
         setLoading(false);
@@ -101,18 +126,20 @@ const EmployeesTab = () => {
   
   useEffect(() => {
     if (selectedEmployee) {
+      console.log('[DEBUG] Selected employee in useEffect:', JSON.stringify(selectedEmployee));
+      
       // Safely extract the employee ID
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
       if (!employeeId) {
-        console.error("[HCYK_BOSSACTIONS] Invalid employee ID:", selectedEmployee);
+        console.error("[DEBUG] Invalid employee ID:", JSON.stringify(selectedEmployee));
         return;
       }
       
       // Convert to string for consistency with object keys
       const employeeIdString = String(employeeId);
       
-      console.log("[HCYK_BOSSACTIONS] Selected employee:", employeeIdString);
+      console.log("[DEBUG] Selected employee ID after processing:", employeeIdString);
       
       setFormData({
         role: selectedEmployee.role,
@@ -126,37 +153,65 @@ const EmployeesTab = () => {
     }
   }, [selectedEmployee, employeeNotes]);
   
-  const fetchEmployeeNote = async (employeeId) => {
+  const fetchEmployeeNote = async (employeeId: string) => {
     try {
       if (!employeeId || employeeId === 'undefined' || employeeId === 'null' || employeeId === 'NaN') {
-        console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employeeId);
+        console.error('[DEBUG] Invalid employee ID for fetchEmployeeNote:', employeeId);
         return;
       }
       
-      console.log('[HCYK_BOSSACTIONS] Fetching employee note for:', employeeId);
+      console.log('[DEBUG] Fetching employee note for:', employeeId);
       
-      const response = await fetchWithFallback(
-        'hcyk_bossactions:getEmployeeNote',
-        {
-          job: getFallbackJob(),
-          identifier: employeeId
-        },
-        true
-      );
+      let attempts = 0;
+      let response;
       
-      if (response.success) {
+      while (attempts < 3) {
+        try {
+          response = await fetchWithFallback<{success: boolean; note: string}>(
+            'hcyk_bossactions:getEmployeeNote',
+            {
+              job: getFallbackJob(),
+              identifier: employeeId
+            },
+            true
+          );
+          
+          if (response && response.success !== undefined) {
+            break;
+          }
+        } catch (err) {
+          console.warn(`[DEBUG] Attempt ${attempts + 1} failed:`, err);
+        }
+        
+        attempts++;
+        if (attempts < 3) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      console.log('[DEBUG] Employee note response:', JSON.stringify(response));
+      
+      if (response && response.success) {
         setEmployeeNotes(prev => ({
           ...prev,
-          [employeeId]: response.note
+          [employeeId]: response.note || ''
+        }));
+      } else {
+        setEmployeeNotes(prev => ({
+          ...prev,
+          [employeeId]: ''
         }));
       }
     } catch (err) {
-      console.error('[HCYK_BOSSACTIONS] Error fetching employee note:', err);
+      console.error('[DEBUG] Error fetching employee note:', err);
+      setEmployeeNotes(prev => ({
+        ...prev,
+        [employeeId]: ''
+      }));
     }
   };
   
-  // Handler for form changes
-  const handleFormChange = (e) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -165,7 +220,6 @@ const EmployeesTab = () => {
     setFormChanged(true);
   };
   
-  // Handler for modal close with check for unsaved changes
   const handleCloseModal = () => {
     if (formChanged) {
       showDialog({
@@ -173,12 +227,12 @@ const EmployeesTab = () => {
         message: 'Máte neuložené změny. Opravdu chcete zavřít?',
         type: 'warning',
         onConfirm: () => {
-          // Reset form data to match the current employee data
           if (selectedEmployee) {
+            const employeeId = safelyExtractEmployeeId(selectedEmployee);
             setFormData({
               role: selectedEmployee.role,
               salary: selectedEmployee.salary,
-              note: employeeNotes[safelyExtractEmployeeId(selectedEmployee)] || ''
+              note: employeeNotes[String(employeeId)] || ''
             });
           }
           setFormChanged(false);
@@ -193,7 +247,6 @@ const EmployeesTab = () => {
   const handleSaveChanges = async () => {
     if (!selectedEmployee) return;
     
-    // Safely extract the employee ID
     const employeeId = safelyExtractEmployeeId(selectedEmployee);
     
     if (!employeeId) {
@@ -202,7 +255,7 @@ const EmployeesTab = () => {
     }
   
     try {
-      const noteResponse = await fetchWithFallback(
+      const noteResponse = await fetchWithFallback<{success: boolean; message?: string}>(
         'saveEmployeeNote', 
         {
           job: getFallbackJob(),
@@ -216,7 +269,7 @@ const EmployeesTab = () => {
         return;
       }
   
-      const detailsResponse = await fetchWithFallback(
+      const detailsResponse = await fetchWithFallback<{success: boolean; message?: string}>(
         'setEmployeeDetails', 
         {
           identifier: employeeId,
@@ -229,13 +282,13 @@ const EmployeesTab = () => {
       if (detailsResponse.success) {
         setEmployees(prev => prev.map(emp => 
           safelyExtractEmployeeId(emp) === employeeId 
-            ? {...emp, role: formData.role, salary: formData.salary} 
+            ? { ...emp, role: formData.role, salary: formData.salary } 
             : emp
         ));
         
         setEmployeeNotes(prev => ({
           ...prev,
-          [employeeId]: formData.note
+          [String(employeeId)]: formData.note
         }));
         
         setFormChanged(false);
@@ -244,24 +297,35 @@ const EmployeesTab = () => {
         showNotification('error', detailsResponse.message || 'Nepodařilo se uložit změny');
       }
     } catch (err) {
-      console.error('Chyba při ukládání změn:', err);
+      console.error('[DEBUG] Error saving changes:', err);
       showNotification('error', 'Nastala chyba při ukládání změn');
     }
   };
   
-  const handleOpenDetail = (employee) => {
+  const handleOpenDetail = (employee: Employee) => {
+    console.log('[DEBUG] handleOpenDetail called with employee:', JSON.stringify(employee));
+    
     if (!employee) {
-      console.error('[HCYK_BOSSACTIONS] Invalid employee data:', employee);
+      console.error('[DEBUG] Invalid employee data (null or undefined)');
       return;
     }
     
-    // Create a clean copy of the employee data
-    const cleanEmployee = convertEmployeeData(employee);
-    
-    console.log('[HCYK_BOSSACTIONS] Opening detail for employee:', cleanEmployee.id);
-    setSelectedEmployee(cleanEmployee);
-    setActiveTab("historie");
-    setShowDetailModal(true);
+    try {
+      const cleanEmployee = convertEmployeeData(employee);
+      console.log('[DEBUG] Converted employee:', JSON.stringify(cleanEmployee));
+      
+      if (!cleanEmployee || !cleanEmployee.id) {
+        console.error('[DEBUG] Failed to convert employee, or no ID found');
+        return;
+      }
+      
+      console.log('[DEBUG] Opening detail for employee ID:', cleanEmployee.id);
+      setSelectedEmployee(cleanEmployee);
+      setActiveTab("historie");
+      setShowDetailModal(true);
+    } catch (err) {
+      console.error('[DEBUG] Error in handleOpenDetail:', err);
+    }
   };
   
   const filteredEmployees = employees.filter(emp => {
@@ -301,23 +365,36 @@ const EmployeesTab = () => {
       </div>
       
       <div className="employees-list">
-        {filteredEmployees.map(emp => (
-          <div key={safelyExtractEmployeeId(emp)} className="employee-card">
-            <div className="employee-info">
-              <div className="employee-header">
-                <h3>{emp.name}</h3>
-                <div className="playtime-indicator">
-                  {emp.weeklyPlaytime || 0} hodin
+        {filteredEmployees.map(emp => {
+          const empId = safelyExtractEmployeeId(emp);
+          console.log('[DEBUG] Rendering employee card with ID:', empId);
+          
+          return (
+            <div key={String(empId || Math.random())} className="employee-card">
+              <div className="employee-info">
+                <div className="employee-header">
+                  <h3>{emp.name}</h3>
+                  <div className="playtime-indicator">
+                    {emp.weeklyPlaytime || 0} hodin
+                  </div>
                 </div>
+                <p>Pozice: {emp.role}</p>
+                <p>Plat: ${emp.salary}</p>
               </div>
-              <p>Pozice: {emp.role}</p>
-              <p>Plat: ${emp.salary}</p>
+              <div className="employee-actions">
+                <button 
+                  onClick={() => {
+                    console.log('[DEBUG] Edit button clicked for employee:', JSON.stringify(emp));
+                    handleOpenDetail(emp);
+                  }} 
+                  className="action-btn"
+                >
+                  Upravit
+                </button>
+              </div>
             </div>
-            <div className="employee-actions">
-              <button onClick={() => handleOpenDetail(emp)} className="action-btn">Upravit</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       {showDetailModal && selectedEmployee && (
@@ -376,7 +453,7 @@ const EmployeesTab = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {employeeHistory[safelyExtractEmployeeId(selectedEmployee)]?.map((item, index) => (
+                          {employeeHistory[Number(safelyExtractEmployeeId(selectedEmployee))]?.map((item, index) => (
                             <tr key={index}>
                               <td>{item.date}</td>
                               <td>
@@ -388,7 +465,7 @@ const EmployeesTab = () => {
                               <td>{item.note}</td>
                             </tr>
                           ))}
-                          {!employeeHistory[safelyExtractEmployeeId(selectedEmployee)] && (
+                          {!employeeHistory[Number(safelyExtractEmployeeId(selectedEmployee))] && (
                             <tr>
                               <td colSpan={4} className="no-data">Žádná historie nenalezena</td>
                             </tr>

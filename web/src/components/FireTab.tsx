@@ -1,21 +1,24 @@
-// Fixed FireTab.jsx or FireTab.tsx
-// Save this in your web/src/components directory, replacing the original file
-
+// Fixed FireTab.tsx with proper TypeScript typing
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
-// Import our new helper functions
-import { safelyExtractEmployeeId, convertEmployeeData } from '../utils/employee-data-fix';
+// Import types and functions from our TypeScript utility file
+import { 
+  safelyExtractEmployeeId, 
+  convertEmployeeData, 
+  Employee, 
+  RawEmployee 
+} from '../utils/employee-data-fix';
 
-const FireTab = () => {
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [severanceAmount, setSeveranceAmount] = useState(0);
+const FireTab: React.FC = () => {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [severanceAmount, setSeveranceAmount] = useState<number>(0);
   const { showNotification } = useNotification();
   const { showDialog } = useDialog();
   
@@ -26,24 +29,27 @@ const FireTab = () => {
         setLoading(true);
         
         const jobName = getFallbackJob();
-        console.log("Fetching employees for job:", jobName);
+        console.log("[DEBUG] Fetching employees for job:", jobName);
         
         // Use the fetchWithFallback utility for consistency
-        const data = await fetchWithFallback(
+        const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
           { job: jobName },
           true // Use mock data if fetch fails
         );
+        
+        console.log("[DEBUG] Raw employee data:", JSON.stringify(data));
         
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
         } else {
           // Transform backend data to frontend Employee type using our improved converter
           const formattedEmployees = data.map(emp => convertEmployeeData(emp));
+          console.log("[DEBUG] Formatted employees:", JSON.stringify(formattedEmployees));
           setEmployees(formattedEmployees);
         }
       } catch (err) {
-        console.error('Chyba při načítání zaměstnanců:', err);
+        console.error('[DEBUG] Error fetching employees:', err);
         setError('Chyba při načítání zaměstnanců');
       } finally {
         setLoading(false);
@@ -53,9 +59,11 @@ const FireTab = () => {
     fetchEmployees();
   }, []);
   
-  const openConfirmModal = (employee) => {
+  const openConfirmModal = (employee: Employee) => {
+    console.log('[DEBUG] openConfirmModal called with employee:', JSON.stringify(employee));
+    
     if (!employee) {
-      console.error('[HCYK_BOSSACTIONS] Invalid employee:', employee);
+      console.error('[DEBUG] Invalid employee:', employee);
       showNotification('error', 'Chyba: Neplatný zaměstnanec');
       return;
     }
@@ -65,12 +73,12 @@ const FireTab = () => {
     const employeeId = safelyExtractEmployeeId(cleanEmployee);
     
     if (!employeeId) {
-      console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', employee);
+      console.error('[DEBUG] Invalid employee ID:', employee);
       showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
       return;
     }
     
-    console.log('[HCYK_BOSSACTIONS] Opening fire confirmation for employee ID:', employeeId);
+    console.log('[DEBUG] Opening fire confirmation for employee ID:', employeeId);
     
     setSelectedEmployee(cleanEmployee);
     setSeveranceAmount(Math.round(cleanEmployee.salary / 2));
@@ -87,14 +95,14 @@ const FireTab = () => {
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
       if (!employeeId) {
-        console.error('[HCYK_BOSSACTIONS] Invalid employee ID:', selectedEmployee);
+        console.error('[DEBUG] Invalid employee ID:', selectedEmployee);
         showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
         return;
       }
       
-      console.log('[HCYK_BOSSACTIONS] Firing employee:', employeeId, 'from job:', jobName);
+      console.log('[DEBUG] Firing employee:', employeeId, 'from job:', jobName);
       
-      const result = await fetchWithFallback(
+      const result = await fetchWithFallback<{success: boolean; message?: string}>(
         'fireEmployee', 
         {
           job: jobName,
@@ -113,7 +121,7 @@ const FireTab = () => {
         showNotification('error', result.message || 'Nepodařilo se propustit zaměstnance');
       }
     } catch (err) {
-      console.error('[HCYK_BOSSACTIONS] Error firing employee:', err);
+      console.error('[DEBUG] Error firing employee:', err);
       showNotification('error', 'Nastala chyba při propouštění');
     }
   };
@@ -125,17 +133,23 @@ const FireTab = () => {
     <div className="tab-content">
       <h2>Propustit</h2>
       <div className="employees-list">
-        {employees.map(emp => (
-          <div key={safelyExtractEmployeeId(emp)} className="employee-card">
-            <div className="employee-info">
-              <h3>{emp.name}</h3>
-              <p>Pozice: {emp.role}</p>
-              <p>Plat: ${emp.salary}</p>
-              <p>Výkon: {emp.performance || 75}%</p>
+        {employees.map(emp => {
+          // Safe extraction of ID for key
+          const empId = safelyExtractEmployeeId(emp);
+          console.log('[DEBUG] Rendering employee card with ID:', empId);
+          
+          return (
+            <div key={String(empId || Math.random())} className="employee-card">
+              <div className="employee-info">
+                <h3>{emp.name}</h3>
+                <p>Pozice: {emp.role}</p>
+                <p>Plat: ${emp.salary}</p>
+                <p>Výkon: {emp.performance || 75}%</p>
+              </div>
+              <button className="danger-btn" onClick={() => openConfirmModal(emp)}>Propustit</button>
             </div>
-            <button className="danger-btn" onClick={() => openConfirmModal(emp)}>Propustit</button>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       <Modal

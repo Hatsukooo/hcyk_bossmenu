@@ -78,6 +78,8 @@ const HireTab: React.FC = () => {
     }
     
     try {
+      console.log('[DEBUG] Hiring employee:', selectedPlayer, 'for position:', selectedPosition);
+      
       const selectedGrade = jobGrades.find(grade => grade.name === selectedPosition);
       if (!selectedGrade) {
         showNotification('error', 'Vybraná pozice není platná');
@@ -86,28 +88,54 @@ const HireTab: React.FC = () => {
       
       const playerId = parseInt(selectedPlayer, 10);
       
-      const result = await fetchWithFallback<{success: boolean; message?: string}>(
-        'hireEmployee', 
-        {
-          player: playerId, 
-          job: getFallbackJob(),
-          position: selectedGrade.grade,
-          additionalInfo,
-          salary: selectedGrade.salary
-        }
-      );
+      console.log('[DEBUG] Hire request data:', {
+        player: playerId, 
+        job: getFallbackJob(),
+        position: selectedGrade.grade,
+        additionalInfo,
+        salary: selectedGrade.salary
+      });
       
-      if (result.success) {
+      let attempts = 0;
+      let result;
+      
+      while (attempts < 3) {
+        try {
+          result = await fetchWithFallback<{success: boolean; message?: string}>(
+            'hireEmployee', 
+            {
+              player: playerId, 
+              job: getFallbackJob(),
+              position: selectedGrade.grade,
+              additionalInfo,
+              salary: selectedGrade.salary
+            }
+          );
+          
+          if (result) break;
+        } catch (err) {
+          console.warn(`[DEBUG] Hire attempt ${attempts + 1} failed:`, err);
+        }
+        
+        attempts++;
+        if (attempts < 3) {
+          await new Promise(resolve => setTimeout(resolve, 500)); 
+        }
+      }
+      
+      console.log('[DEBUG] Hire response:', result);
+      
+      if (result && result.success) {
         showNotification('success', 'Zaměstnanec byl úspěšně přijat');
-
+  
         setSelectedPlayer("");
         setSelectedPosition("");
         setAdditionalInfo("");
       } else {
-        showNotification('error', result.message || 'Nepodařilo se přijmout zaměstnance');
+        showNotification('error', result?.message || 'Nepodařilo se přijmout zaměstnance');
       }
     } catch (err) {
-      console.error('Chyba při přijímání zaměstnance:', err);
+      console.error('[DEBUG] Error hiring employee:', err);
       showNotification('error', 'Nastala chyba při přijímání zaměstnance');
     }
   };
