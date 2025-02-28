@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { Employee, EmployeeBackend } from '../types';
+import { Employee, EmployeeBackend, convertBackendToEmployee } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
@@ -36,16 +36,8 @@ const FireTab: React.FC = () => {
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
         } else {
-          // Transform backend data to frontend Employee type
-          const formattedEmployees = data.map((emp: EmployeeBackend) => ({
-            id: emp.identifier,
-            name: `${emp.firstname} ${emp.lastname}`,
-            role: emp.grade_name,
-            salary: emp.salary || 0,
-            performance: emp.performance || 75,
-            level: emp.grade
-          }));
-          
+          // Transform backend data to frontend Employee type using the convertBackendToEmployee function
+          const formattedEmployees = data.map(emp => convertBackendToEmployee(emp));
           setEmployees(formattedEmployees);
         }
       } catch (err) {
@@ -109,7 +101,7 @@ const FireTab: React.FC = () => {
               <h3>{emp.name}</h3>
               <p>Pozice: {emp.role}</p>
               <p>Plat: ${emp.salary}</p>
-              <p>Výkon: {emp.performance}%</p>
+              <p>Výkon: {emp.performance || 75}%</p>
             </div>
             <button className="danger-btn" onClick={() => openConfirmModal(emp)}>Propustit</button>
           </div>

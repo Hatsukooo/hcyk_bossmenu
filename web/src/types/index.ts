@@ -6,6 +6,7 @@ export interface Employee {
   salary: number;
   level?: number;
   weeklyPlaytime?: number;
+  performance?: number; // Added this line to fix TypeScript errors
 }
 
 export interface HistoryItem {
@@ -92,6 +93,7 @@ export interface EmployeeBackend {
   grade_label?: string;
   salary?: number;
   weeklyPlaytime?: number;
+  performance?: number; // Added this line to fix TypeScript errors
 }
 
 declare global {
@@ -126,6 +128,7 @@ export function convertBackendToEmployee(emp: EmployeeBackend): Employee {
     role: emp.grade_name,
     salary: emp.salary || 0,
     level: emp.grade,
-    weeklyPlaytime: emp.weeklyPlaytime || 0
+    weeklyPlaytime: emp.weeklyPlaytime || 0,
+    performance: emp.performance || 75
   };
 }
