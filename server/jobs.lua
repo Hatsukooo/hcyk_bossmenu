@@ -25,7 +25,6 @@ function GetEmployees(job)
     local result = {}
     local success = false
     
-    -- First attempt - With proper collation
     local query1 = [[
         SELECT 
             u.identifier, 
@@ -83,7 +82,6 @@ function GetEmployees(job)
         return result
     end
     
-    -- Third attempt - Two separate queries for maximum compatibility
     local employees = {}
     success, employees = pcall(function()
         local users = MySQL.Sync.fetchAll("SELECT identifier, firstname, lastname, job_grade FROM users WHERE job = ?", { job })
