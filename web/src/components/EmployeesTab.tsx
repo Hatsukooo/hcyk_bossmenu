@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
@@ -47,6 +47,7 @@ const EmployeesTab: React.FC = () => {
     salary: 0,
     note: ''
   });
+  const [jobGrades, setJobGrades] = useState<Array<{grade: number, name: string, label: string, salary: number}>>([]);
   const pendingNoteRequests = useRef<string[]>([]);
 
   const { showNotification } = useNotification();
@@ -91,6 +92,20 @@ const EmployeesTab: React.FC = () => {
         
         const job = getFallbackJob();
         console.log('[DEBUG] Fetching employees for job:', job);
+        
+        // Fetch job grades/ranks first
+        const ranks = await fetchWithFallback<Array<{grade: number, name: string, label: string, salary: number}>>(
+          'getRanks', 
+          { job },
+          true
+        );
+        
+        console.log('[DEBUG] Job ranks received:', JSON.stringify(ranks));
+        if (ranks && ranks.length > 0) {
+          // Sort ranks by grade
+          const sortedRanks = ranks.sort((a, b) => a.grade - b.grade);
+          setJobGrades(sortedRanks);
+        }
         
         const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
@@ -214,7 +229,7 @@ const EmployeesTab: React.FC = () => {
         [employeeId]: ''
       }));
     } finally {
-      pendingNoteRequests.current = pendingNoteRequests.current.filter(id => id !== employeeId);
+      pendingNoteRequests.current = pendingNoteRequests.current.filter((id: string) => id !== employeeId);
     }
   };
   
@@ -262,6 +277,12 @@ const EmployeesTab: React.FC = () => {
     }
   
     try {
+      // Find the corresponding grade level for the selected role
+      const selectedGrade = jobGrades.find(grade => grade.name === formData.role);
+      const gradeLevel = selectedGrade ? selectedGrade.grade : selectedEmployee.level;
+      
+      console.log('[DEBUG] Saving employee with role:', formData.role, 'grade level:', gradeLevel);
+      
       const noteResponse = await fetchWithFallback<{success: boolean; message?: string}>(
         'saveEmployeeNote', 
         {
@@ -281,15 +302,16 @@ const EmployeesTab: React.FC = () => {
         {
           identifier: employeeId,
           job: getFallbackJob(),
-          level: selectedEmployee.level,
+          level: gradeLevel, // Use the correct grade level for the selected role
           salary: formData.salary
         }
       );
   
       if (detailsResponse.success) {
+        // Update the employee in the local state
         setEmployees(prev => prev.map(emp => 
           safelyExtractEmployeeId(emp) === employeeId 
-            ? { ...emp, role: formData.role, salary: formData.salary } 
+            ? { ...emp, role: formData.role, salary: formData.salary, level: gradeLevel } 
             : emp
         ));
         
@@ -519,9 +541,17 @@ const EmployeesTab: React.FC = () => {
                       value={formData.role}
                       onChange={handleFormChange}
                     >
-                      {uniqueRoles.map((role, index) => (
-                        <option key={index} value={role}>{role}</option>
-                      ))}
+                      {jobGrades.length > 0 ? (
+                        jobGrades.map(grade => (
+                          <option key={grade.grade} value={grade.name}>
+                            {grade.label} (Level {grade.grade})
+                          </option>
+                        ))
+                      ) : (
+                        uniqueRoles.map((role, index) => (
+                          <option key={index} value={role}>{role}</option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>

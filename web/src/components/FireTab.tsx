@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useNotification } from '../context/NotificationContext';
-import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
-// Import types and functions from our TypeScript utility file
-import { 
-  safelyExtractEmployeeId, 
-  convertEmployeeData, 
-  Employee, 
-  RawEmployee 
-} from '../utils/employee-data-fix';
+import {safelyExtractEmployeeId, convertEmployeeData, Employee, RawEmployee } from '../utils/employee-data-fix';
 
 const FireTab: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -19,9 +12,7 @@ const FireTab: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [severanceAmount, setSeveranceAmount] = useState<number>(0);
   const { showNotification } = useNotification();
-  const { showDialog } = useDialog();
   
-  // Fetch employees when component mounts
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -30,7 +21,6 @@ const FireTab: React.FC = () => {
         const jobName = getFallbackJob();
         console.log("[DEBUG] Fetching employees for job:", jobName);
         
-        // Use the fetchWithFallback utility for consistency
         const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
           { job: jobName },

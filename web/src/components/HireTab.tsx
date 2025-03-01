@@ -25,40 +25,8 @@ const HireTab: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [selectedPosition, setSelectedPosition] = useState<string>("");
   const [additionalInfo, setAdditionalInfo] = useState<string>("");
+  const [isHiring, setIsHiring] = useState<boolean>(false); // Add missing state
   const { showNotification } = useNotification();
-
-  const safelyFetchData = async <T,>(
-    endpoint: string,
-    data: any,
-    defaultValue: T
-  ): Promise<T> => {
-    try {
-      const response = await fetch(`https://hcyk_bossmenu/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      // For empty responses, return the default value
-      const text = await response.text();
-      if (!text || text.trim() === '') {
-        console.warn(`[DEBUG] Empty response from ${endpoint}`);
-        return defaultValue;
-      }
-
-      // Safely parse JSON
-      try {
-        return JSON.parse(text) as T;
-      } catch (e) {
-        console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
-        console.error(`[DEBUG] Attempted to parse:`, text);
-        return defaultValue;
-      }
-    } catch (error) {
-      console.warn(`[DEBUG] Error fetching ${endpoint}:`, error);
-      return defaultValue;
-    }
-  };
 
   // Fetch nearby players when component mounts
   useEffect(() => {
@@ -243,9 +211,9 @@ const HireTab: React.FC = () => {
             <button 
               type="submit" 
               className="action-btn"
-              disabled={!selectedPlayer || !selectedPosition}
+              disabled={!selectedPlayer || !selectedPosition || isHiring}
             >
-              Zaměstnat
+              {isHiring ? "Zpracovávám..." : "Zaměstnat"}
             </button>
             <button 
               type="button" 
