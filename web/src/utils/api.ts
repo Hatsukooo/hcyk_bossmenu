@@ -1,5 +1,3 @@
-// Updated version of web/src/utils/api.ts
-
 /**
  * Makes a fetch request to a FiveM NUI endpoint with proper error handling
  * @param endpoint The endpoint name without the https://resourceName/ prefix
@@ -18,14 +16,12 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
       body: JSON.stringify(data)
     });
 
-    // For empty responses, return an empty object
     const text = await response.text();
     if (!text) {
       console.warn(`Empty response from ${endpoint}`);
       return {} as T;
     }
 
-    // Try to parse the JSON
     try {
       return JSON.parse(text) as T;
     } catch (jsonError) {
@@ -38,25 +34,28 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
   }
 };
 
-
 export const getFallbackJob = (): string => {
+  if (window.PlayerData?.job?.name) {
+    console.log('[DEBUG] Using PlayerData job name:', window.PlayerData.job.name);
+    return window.PlayerData.job.name;
+  }
+  
   if (window.latestJobData && typeof window.latestJobData === 'string') {
     console.log('[DEBUG] Using latestJobData:', window.latestJobData);
     return window.latestJobData;
   }
   
-  if (window.PlayerData?.job?.name) {
-    console.log('[DEBUG] Using PlayerData job name:', window.PlayerData.job.name);
-    return window.PlayerData.job.name;
+  const urlParams = new URLSearchParams(window.location.search);
+  const jobFromUrl = urlParams.get('job');
+  if (jobFromUrl) {
+    console.log('[DEBUG] Using job from URL:', jobFromUrl);
+    return jobFromUrl;
   }
   
   console.log('[DEBUG] No job found, defaulting to empty string');
   return "";
 };
 
-/**
- * Helper to ensure job parameter is always a string
- */
 export const ensureJobString = (job: any): string => {
   if (typeof job === 'string') {
     return job;
@@ -102,7 +101,6 @@ export const getMockData = (endpoint: string, data: any): any => {
         ]
       };
     case 'getEmployeesPlaytime':
-      // Generate mock playtime data for all employees
       const mockPlaytimeData: {[key: string]: number} = {
         '1': 25,
         '2': 18,
@@ -127,16 +125,13 @@ export const fetchWithFallback = async <T = any>(
   data: any,
   useMock: boolean = false
 ): Promise<T> => {
-  // Ensure data is an object
   data = data || {};
   
-  // If data contains a job field, ensure it's properly formatted
   if (data && data.job) {
     data.job = ensureJobString(data.job);
   }
   
   try {
-    // Remove any prefix from endpoint if it exists
     const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
     return await fetchNUI<T>(cleanEndpoint, data);
   } catch (error) {
@@ -144,7 +139,6 @@ export const fetchWithFallback = async <T = any>(
     
     if (useMock) {
       console.info(`Using mock data for ${endpoint}`);
-      // Get the endpoint name without any prefix
       const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
       return getMockData(cleanEndpoint, data) as T;
     }

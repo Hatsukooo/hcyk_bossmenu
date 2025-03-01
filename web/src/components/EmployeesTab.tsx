@@ -89,7 +89,11 @@ const EmployeesTab: React.FC = () => {
     }
   };
 
+  
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 5;
+    
     const fetchEmployees = async () => {
       try {
         setLoading(true);
@@ -99,7 +103,14 @@ const EmployeesTab: React.FC = () => {
         console.log('[DEBUG] fetchEmployees - job name:', job);
         
         if (!job) {
-          console.error('[DEBUG] No job found, cannot fetch employees');
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`[DEBUG] No job found, retrying in 500ms (${retryCount}/${maxRetries})`);
+            setTimeout(fetchEmployees, 500);
+            return;
+          }
+          
+          console.error('[DEBUG] Max retries reached, cannot fetch employees');
           setError('Nelze načíst zaměstnance: Chybí název frakce');
           setLoading(false);
           return;
@@ -159,6 +170,20 @@ const EmployeesTab: React.FC = () => {
   
     fetchEmployees();
   }, []); 
+
+  useEffect(() => {
+    const handleJobUpdate = (event: CustomEvent) => {
+      if (event.detail?.job) {
+        fetchEmployees();
+      }
+    };
+    
+    window.addEventListener('jobDataUpdated', handleJobUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('jobDataUpdated', handleJobUpdate as EventListener);
+    };
+  }, []);
   
   useEffect(() => {
     setUniqueRoles(Array.from(new Set(employees.map(emp => emp.role))));
