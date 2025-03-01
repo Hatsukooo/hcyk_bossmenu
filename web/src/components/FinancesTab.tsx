@@ -20,17 +20,19 @@ const FinancesTab: React.FC = () => {
         setError(null);
         
         const job = getFallbackJob();
+        console.log('[DEBUG] Fetching financial data for job:', job, 'timeRange:', timeRange);
         
         // Fetch society money
         const moneyData = await fetchWithFallback<number>(
           'getSocietyMoney', 
           { job }, 
-          true // Use mock data if fetch fails
+          true
         );
         
+        console.log('[DEBUG] Society money data received:', moneyData);
         setSocietyMoney(moneyData || 0);
 
-        // Fetch financial stats
+        // Fetch financial stats with proper time range parameter
         const statsData = await fetchWithFallback<{
           income: number;
           expenses: number;
@@ -41,16 +43,21 @@ const FinancesTab: React.FC = () => {
             job,
             timeRange
           }, 
-          true // Use mock data if fetch fails
+          true
         );
         
-        setFinanceStats({
-          income: statsData.income || 0,
-          expenses: statsData.expenses || 0,
-          netProfit: statsData.netProfit || 0
-        });
+        console.log('[DEBUG] Financial stats received:', statsData);
+        
+        // Ensure we have valid data before setting state
+        if (statsData) {
+          setFinanceStats({
+            income: statsData.income || 0,
+            expenses: statsData.expenses || 0,
+            netProfit: statsData.netProfit || 0
+          });
+        }
       } catch (err) {
-        console.error('Chyba při načítání financí:', err);
+        console.error('[DEBUG] Error fetching finances:', err);
         setError('Chyba při načítání financí');
       } finally {
         setLoading(false);
@@ -58,7 +65,7 @@ const FinancesTab: React.FC = () => {
     };
 
     fetchFinancialData();
-  }, [timeRange]);
+  }, [timeRange]); // Re-fetch when timeRange changes
 
   if (loading) return <div>Načítání financí...</div>;
   if (error) return <div className="error-message">{error}</div>;
