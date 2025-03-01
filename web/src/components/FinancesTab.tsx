@@ -26,13 +26,13 @@ const FinancesTab: React.FC = () => {
         const moneyData = await fetchWithFallback<number>(
           'getSocietyMoney', 
           { job }, 
-          true
+          true // Use mock data if fetch fails
         );
         
         console.log('[DEBUG] Society money data received:', moneyData);
         setSocietyMoney(moneyData || 0);
 
-        // Fetch financial stats with proper time range parameter
+        // Fetch financial stats
         const statsData = await fetchWithFallback<{
           income: number;
           expenses: number;
@@ -43,17 +43,23 @@ const FinancesTab: React.FC = () => {
             job,
             timeRange
           }, 
-          true
+          true // Use mock data if fetch fails
         );
         
-        console.log('[DEBUG] Financial stats received:', statsData);
+        console.log('[DEBUG] Financial stats received:', JSON.stringify(statsData));
         
-        // Ensure we have valid data before setting state
         if (statsData) {
           setFinanceStats({
-            income: statsData.income || 0,
-            expenses: statsData.expenses || 0,
-            netProfit: statsData.netProfit || 0
+            income: Number(statsData.income) || 0,
+            expenses: Number(statsData.expenses) || 0,
+            netProfit: Number(statsData.netProfit) || 0
+          });
+        } else {
+          console.error('[DEBUG] Invalid financial stats data received');
+          setFinanceStats({
+            income: 0,
+            expenses: 0,
+            netProfit: 0
           });
         }
       } catch (err) {
@@ -65,7 +71,7 @@ const FinancesTab: React.FC = () => {
     };
 
     fetchFinancialData();
-  }, [timeRange]); // Re-fetch when timeRange changes
+  }, [timeRange]);
 
   if (loading) return <div>Načítání financí...</div>;
   if (error) return <div className="error-message">{error}</div>;

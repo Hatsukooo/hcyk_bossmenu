@@ -55,3 +55,15 @@ CREATE TABLE IF NOT EXISTS `employee_notes` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `employee_identifier` (`employee_identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `job_revenues` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `job_name` varchar(50) NOT NULL,
+  `type` enum('income','expense') NOT NULL,
+  `amount` float NOT NULL,
+  `date` date NOT NULL,
+  `description` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `job_name` (`job_name`),
+  KEY `date` (`date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

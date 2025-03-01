@@ -1,3 +1,16 @@
+local function debugFinances(job, timeRange, result)
+    if Config.Debug then
+        print('[HCYK_BOSSACTIONS] Financial stats for job: ' .. job .. ', timeRange: ' .. tostring(timeRange))
+        if result and result[1] then
+            print('[HCYK_BOSSACTIONS] Income: ' .. tostring(result[1].income))
+            print('[HCYK_BOSSACTIONS] Expenses: ' .. tostring(result[1].expenses))
+            print('[HCYK_BOSSACTIONS] Net Profit: ' .. tostring(result[1].netProfit))
+        else
+            print('[HCYK_BOSSACTIONS] No financial data found')
+        end
+    end
+end
+
 lib.callback.register('hcyk_bossactions:getFinancialStats', function(source, job, timeRange)
     local xPlayer = ESX.GetPlayerFromId(source)
     
@@ -36,6 +49,7 @@ lib.callback.register('hcyk_bossactions:getFinancialStats', function(source, job
     end)
     
     if not success or not result or #result == 0 then
+        debugFinances(job, timeRange, nil)
         return {
             income = 0,
             expenses = 0,
