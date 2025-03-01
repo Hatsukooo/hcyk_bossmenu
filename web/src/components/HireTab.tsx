@@ -59,7 +59,7 @@ const HireTab: React.FC = () => {
           
         setJobGrades(sortedRanks);
       } catch (err) {
-        //console.error('Chyba při načítání dat:', err);
+        console.error('Chyba při načítání dat:', err);
         setError('Chyba při komunikaci se serverem');
       } finally {
         setLoading(false);
@@ -97,11 +97,11 @@ const HireTab: React.FC = () => {
         return;
       }
       
-      //console.log('[DEBUG] Hiring employee:', playerId, 'for position:', selectedPosition, 'grade:', selectedGrade.grade);
+      console.log('[DEBUG] Hiring employee:', playerId, 'for position:', selectedPosition, 'grade:', selectedGrade.grade);
       
       const job = getFallbackJob();
       
-      //console.log('[DEBUG] Hiring data:', {
+      console.log('[DEBUG] Hiring data:', {
         player: playerId,
         job: job,
         position: selectedGrade.grade
@@ -117,7 +117,7 @@ const HireTab: React.FC = () => {
         false 
       );
       
-      //console.log('[DEBUG] Hire response:', result);
+      console.log('[DEBUG] Hire response:', result);
       
       if (result && result.success) {
         showNotification('success', 'Zaměstnanec byl úspěšně přijat');
@@ -129,7 +129,7 @@ const HireTab: React.FC = () => {
         showNotification('error', errorMessage);
       }
     } catch (err) {
-      //console.error('[DEBUG] Error hiring employee:', err);
+      console.error('[DEBUG] Error hiring employee:', err);
       showNotification('error', 'Nastala chyba při přijímání zaměstnance');
     } finally {
       setIsHiring(false);

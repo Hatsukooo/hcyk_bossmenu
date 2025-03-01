@@ -80,7 +80,7 @@ const FactionManagementTab: React.FC = () => {
           setRanks(ranksData);
         }
       } catch (err) {
-        //console.error('Chyba při načítání dat frakce:', err);
+        console.error('Chyba při načítání dat frakce:', err);
         setError('Chyba při načítání dat frakce');
       } finally {
         setLoading(false);
@@ -178,7 +178,7 @@ const FactionManagementTab: React.FC = () => {
         showNotification('error', response.message || 'Nepodařilo se upravit hodnost');
       }
     } catch (err) {
-      //console.error('Chyba při úpravě hodnosti:', err);
+      console.error('Chyba při úpravě hodnosti:', err);
       showNotification('error', 'Nastala chyba při úpravě hodnosti');
     }
   };
@@ -204,14 +204,14 @@ const FactionManagementTab: React.FC = () => {
           showNotification('success', 'Hodnost úspěšně vytvořena');
           setShowCreateModal(false);
         } catch (err) {
-          //console.error('Chyba při načítání hodností po vytvoření:', err);
+          console.error('Chyba při načítání hodností po vytvoření:', err);
           showNotification('warning', 'Hodnost vytvořena, ale nelze aktualizovat seznam');
         }
       } else {
         showNotification('error', response.message || 'Nepodařilo se vytvořit hodnost');
       }
     } catch (err) {
-      //console.error('Chyba při vytváření hodnosti:', err);
+      console.error('Chyba při vytváření hodnosti:', err);
       showNotification('error', 'Nastala chyba při vytváření hodnosti');
     }
   };
@@ -246,7 +246,7 @@ const FactionManagementTab: React.FC = () => {
             showNotification('error', response.message || 'Nepodařilo se smazat hodnost');
           }
         } catch (err) {
-          //console.error('Chyba při mazání hodnosti:', err);
+          console.error('Chyba při mazání hodnosti:', err);
           showNotification('error', 'Nastala chyba při mazání hodnosti');
         }
       }
@@ -290,13 +290,13 @@ const FactionManagementTab: React.FC = () => {
             setInitialJobLabel(refreshedJobData.label || '');
           }
         } catch (refreshError) {
-          //console.error('Chyba při aktualizaci dat frakce:', refreshError);
+          console.error('Chyba při aktualizaci dat frakce:', refreshError);
         }
       } else {
         showNotification('error', response.message || 'Nepodařilo se uložit nastavení frakce');
       }
     } catch (err) {
-      //console.error('Chyba při ukládání nastavení frakce:', err);
+      console.error('Chyba při ukládání nastavení frakce:', err);
       showNotification('error', 'Nastala chyba při ukládání nastavení frakce');
     }
   };

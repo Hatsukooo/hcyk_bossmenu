@@ -45,16 +45,16 @@ const App: React.FC = () => {
       return response.json();
     })
     .then(data => {
-      //console.log("UI hide success:", data);
+      console.log("UI hide success:", data);
     })
     .catch(err => {
-      //console.error('Error closing UI:', err);
+      console.error('Error closing UI:', err);
       setTimeout(() => {
         fetch(`https://hcyk_bossmenu/hideUI`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
-        }).catch(e => //console.error('Second attempt failed:', e));
+        }).catch(e => console.error('Second attempt failed:', e));
       }, 500);
     });
   };

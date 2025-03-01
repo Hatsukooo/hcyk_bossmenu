@@ -31,21 +31,21 @@ export interface Employee {
  * @returns The extracted ID as string or null if invalid
  */
 export function safelyExtractEmployeeId(employee: any): string | null {
-  //console.log('[DEBUG] safelyExtractEmployeeId input:', JSON.stringify(employee));
+  console.log('[DEBUG] safelyExtractEmployeeId input:', JSON.stringify(employee));
   
   // Case 1: Employee is already a primitive value
   if (employee === null || employee === undefined) {
-    //console.log('[DEBUG] Employee is null or undefined');
+    console.log('[DEBUG] Employee is null or undefined');
     return null;
   }
   
   if (typeof employee === 'number') {
-    //console.log('[DEBUG] Employee is a number:', employee);
+    console.log('[DEBUG] Employee is a number:', employee);
     return String(employee);
   }
   
   if (typeof employee === 'string') {
-    //console.log('[DEBUG] Employee is a string:', employee);
+    console.log('[DEBUG] Employee is a string:', employee);
     // Don't try to parse strings to numbers - keep them as strings
     return employee === 'NaN' || employee === 'undefined' || employee === 'null' ? null : employee;
   }
@@ -54,7 +54,7 @@ export function safelyExtractEmployeeId(employee: any): string | null {
   if (employee && typeof employee === 'object') {
     // First try the id property
     if (employee.id !== undefined) {
-      //console.log('[DEBUG] Found id property in employee object:', employee.id);
+      console.log('[DEBUG] Found id property in employee object:', employee.id);
       
       // Handle all possible types safely
       if (typeof employee.id === 'string') {
@@ -71,7 +71,7 @@ export function safelyExtractEmployeeId(employee: any): string | null {
     
     // Then try the identifier property
     if (employee.identifier !== undefined) {
-      //console.log('[DEBUG] Found identifier property in employee object:', employee.identifier);
+      console.log('[DEBUG] Found identifier property in employee object:', employee.identifier);
       
       // Handle all possible types safely
       if (typeof employee.identifier === 'string') {
@@ -88,8 +88,8 @@ export function safelyExtractEmployeeId(employee: any): string | null {
     }
   }
   
-  //console.error('[DEBUG] FAILED to extract ID. Employee object keys:', employee ? Object.keys(employee) : 'null');
-  //console.error('[DEBUG] Complete employee object:', employee);
+  console.error('[DEBUG] FAILED to extract ID. Employee object keys:', employee ? Object.keys(employee) : 'null');
+  console.error('[DEBUG] Complete employee object:', employee);
   return null;
 }
 
@@ -99,10 +99,10 @@ export function safelyExtractEmployeeId(employee: any): string | null {
  * @returns Formatted employee data
  */
 export function convertEmployeeData(emp: RawEmployee): Employee {
-  //console.log('[DEBUG] convertEmployeeData input:', JSON.stringify(emp));
+  console.log('[DEBUG] convertEmployeeData input:', JSON.stringify(emp));
   
   if (!emp) {
-    //console.error('[DEBUG] Empty employee data passed to converter');
+    console.error('[DEBUG] Empty employee data passed to converter');
     return {
       id: "0",
       name: 'Unknown',
@@ -135,7 +135,7 @@ export function convertEmployeeData(emp: RawEmployee): Employee {
     performance: typeof emp.performance === 'number' ? emp.performance : 75
   };
   
-  //console.log('[DEBUG] Transformed employee:', JSON.stringify(transformedEmployee));
+  console.log('[DEBUG] Transformed employee:', JSON.stringify(transformedEmployee));
   return transformedEmployee;
 }
 
@@ -151,14 +151,14 @@ export async function employeeAction<T = any>(
   data: Record<string, any> = {}, 
   employee: RawEmployee | Employee | string | number
 ): Promise<T> {
-  //console.log('[DEBUG] employeeAction called for endpoint:', endpoint);
-  //console.log('[DEBUG] employeeAction data:', JSON.stringify(data));
-  //console.log('[DEBUG] employeeAction employee:', JSON.stringify(employee));
+  console.log('[DEBUG] employeeAction called for endpoint:', endpoint);
+  console.log('[DEBUG] employeeAction data:', JSON.stringify(data));
+  console.log('[DEBUG] employeeAction employee:', JSON.stringify(employee));
   
   const employeeId = safelyExtractEmployeeId(employee);
   
   if (!employeeId) {
-    //console.error(`[DEBUG] Invalid employee ID for ${endpoint}`);
+    console.error(`[DEBUG] Invalid employee ID for ${endpoint}`);
     return { success: false, message: "Neplatný identifikátor zaměstnance" } as unknown as T;
   }
   
@@ -167,7 +167,7 @@ export async function employeeAction<T = any>(
     identifier: employeeId
   };
   
-  //console.log(`[DEBUG] Final ${endpoint} request data:`, JSON.stringify(requestData));
+  console.log(`[DEBUG] Final ${endpoint} request data:`, JSON.stringify(requestData));
   
   try {
     const response = await fetch(`https://hcyk_bossmenu/${endpoint}`, {
@@ -184,15 +184,15 @@ export async function employeeAction<T = any>(
     
     try {
       const responseData = JSON.parse(text);
-      //console.log(`[DEBUG] ${endpoint} response:`, JSON.stringify(responseData));
+      console.log(`[DEBUG] ${endpoint} response:`, JSON.stringify(responseData));
       return responseData;
     } catch (e) {
-      //console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
-      //console.error(`[DEBUG] Attempted to parse:`, text);
+      console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
+      console.error(`[DEBUG] Attempted to parse:`, text);
       return { success: false, message: "Chyba při zpracování odpovědi" } as unknown as T;
     }
   } catch (error) {
-    //console.error(`[DEBUG] Error in ${endpoint}:`, error);
+    console.error(`[DEBUG] Error in ${endpoint}:`, error);
     return { success: false, message: "Chyba při zpracování požadavku" } as unknown as T;
   }
 }
@@ -203,8 +203,8 @@ export function safeJsonParse<T>(text: string): T {
   try {
     return JSON.parse(text) as T;
   } catch (e) {
-    //console.error('[DEBUG] JSON parse error:', e);
-    //console.error('[DEBUG] Attempted to parse:', text);
+    console.error('[DEBUG] JSON parse error:', e);
+    console.error('[DEBUG] Attempted to parse:', text);
     return {} as T;
   }
 }

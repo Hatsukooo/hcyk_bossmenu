@@ -27,7 +27,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, message })
-    }).catch(err => //console.error('Error sending notification to game:', err));
+    }).catch(err => console.error('Error sending notification to game:', err));
   }, []);
 
   const closeNotification = useCallback((id: string) => {

@@ -21,7 +21,7 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
     // For empty responses, return an empty object
     const text = await response.text();
     if (!text) {
-      //console.warn(`Empty response from ${endpoint}`);
+      console.warn(`Empty response from ${endpoint}`);
       return {} as T;
     }
 
@@ -29,11 +29,11 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
     try {
       return JSON.parse(text) as T;
     } catch (jsonError) {
-      //console.error(`Failed to parse JSON from ${endpoint}:`, text);
+      console.error(`Failed to parse JSON from ${endpoint}:`, text);
       throw new Error(`Invalid JSON response: ${jsonError}`);
     }
   } catch (error) {
-    //console.error(`Error fetching from ${endpoint}:`, error);
+    console.error(`Error fetching from ${endpoint}:`, error);
     throw error;
   }
 };
@@ -101,7 +101,7 @@ export const getMockData = (endpoint: string, data: any): any => {
       };
       return mockPlaytimeData;
     default:
-      //console.log(`No mock data defined for ${endpoint}, returning empty object`);
+      console.log(`No mock data defined for ${endpoint}, returning empty object`);
       return {};
   }
 };
@@ -131,7 +131,7 @@ export const fetchWithFallback = async <T = any>(
     const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
     return await fetchNUI<T>(cleanEndpoint, data);
   } catch (error) {
-    //console.warn(`Error fetching ${endpoint}, ${useMock ? 'using mock data' : 'throwing error'}:`, error);
+    console.warn(`Error fetching ${endpoint}, ${useMock ? 'using mock data' : 'throwing error'}:`, error);
     
     if (useMock) {
       console.info(`Using mock data for ${endpoint}`);
