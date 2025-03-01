@@ -125,10 +125,20 @@ export function convertEmployeeData(emp: RawEmployee): Employee {
     name = 'Unknown';
   }
   
+  // Get the role from various possible fields, prioritizing grade_label
+  let role = 'Unknown';
+  if (emp.grade_label) {
+    role = emp.grade_label;
+  } else if (emp.grade_name) {
+    role = emp.grade_name;
+  } else if (emp.role) {
+    role = emp.role;
+  }
+  
   const transformedEmployee: Employee = {
     id: id,
     name: name || 'Unknown',
-    role: emp.role || emp.grade_name || 'Unknown',
+    role: role,
     salary: typeof emp.salary === 'number' ? emp.salary : 0,
     level: typeof emp.level === 'number' ? emp.level : (typeof emp.grade === 'number' ? emp.grade : 0),
     weeklyPlaytime: typeof emp.weeklyPlaytime === 'number' ? emp.weeklyPlaytime : 0,

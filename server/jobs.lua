@@ -407,6 +407,7 @@ lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job,
     if not identifier then
         return {success = false, message = "Neplatný identifikátor zaměstnance"}
     end
+    
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
     end

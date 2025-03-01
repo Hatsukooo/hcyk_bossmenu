@@ -3,6 +3,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
 import { safelyExtractEmployeeId, convertEmployeeData, Employee, RawEmployee } from '../utils/employee-data-fix';
+
 interface HistoryItem {
   date: string;
   type: string;
@@ -14,6 +15,7 @@ interface EmployeeHistory {
   [key: number]: HistoryItem[];
 }
 
+// Mock history data
 const employeeHistory: EmployeeHistory = {
   1: [
     { date: '15.1.2025', type: 'Prémie', amount: '+$200', note: 'Splnění kvartálního cíle' },
@@ -32,6 +34,7 @@ const employeeHistory: EmployeeHistory = {
 };
 
 const EmployeesTab: React.FC = () => {
+  // State
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -47,6 +50,9 @@ const EmployeesTab: React.FC = () => {
     salary: 0,
     note: ''
   });
+  const [allJobGrades, setAllJobGrades] = useState<any[]>([]);
+  const [uniqueRoles, setUniqueRoles] = useState<string[]>([]);
+  
   const pendingNoteRequests = useRef<string[]>([]);
 
   const { showNotification } = useNotification();
@@ -83,6 +89,7 @@ const EmployeesTab: React.FC = () => {
     }
   };
 
+  // Fetch employees on component mount
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -142,6 +149,46 @@ const EmployeesTab: React.FC = () => {
   }, []); 
   
   useEffect(() => {
+    setUniqueRoles(Array.from(new Set(employees.map(emp => emp.role))));
+    
+    const fetchJobGrades = async () => {
+      try {
+        const job = getFallbackJob();
+        console.log('[DEBUG] Fetching job grades for job:', job);
+        
+        const gradesData = await fetchWithFallback<any[]>(
+          'getRanks', 
+          { job },
+          true
+        );
+        
+        if (gradesData && gradesData.length > 0) {
+          console.log('[DEBUG] Retrieved job grades:', gradesData);
+          setAllJobGrades(gradesData);
+        } else {
+          console.log('[DEBUG] No job grades found');
+        }
+      } catch (err) {
+        console.error('[DEBUG] Error fetching job grades:', err);
+      }
+    };
+    
+    fetchJobGrades();
+  }, [employees]);
+  
+  // Debug logging for roles
+  useEffect(() => {
+    console.log('[DEBUG] Available roles for filtering:', uniqueRoles);
+    console.log('[DEBUG] All employees with roles:', employees.map(e => ({
+      name: e.name, 
+      role: e.role,
+      raw_id: e.id,
+      level: e.level
+    })));
+  }, [employees, uniqueRoles]);
+
+  // Update form data when selected employee changes
+  useEffect(() => {
     if (selectedEmployee) {
       console.log('[DEBUG] Selected employee in useEffect:', JSON.stringify(selectedEmployee));
       
@@ -176,7 +223,22 @@ const EmployeesTab: React.FC = () => {
         console.log('[DEBUG] Using cached note for employee:', employeeIdString);
       }
     }
-  }, [selectedEmployee]); 
+  }, [selectedEmployee]);
+  
+  // Update form data when employeeNotes changes
+  useEffect(() => {
+    if (selectedEmployee) {
+      const employeeId = safelyExtractEmployeeId(selectedEmployee);
+      if (employeeId && employeeNotes[String(employeeId)] !== undefined) {
+        setFormData(prev => ({
+          ...prev,
+          role: selectedEmployee.role,
+          salary: selectedEmployee.salary,
+          note: employeeNotes[String(employeeId)] || ''
+        }));
+      }
+    }
+  }, [selectedEmployee, employeeNotes]);
   
   const fetchEmployeeNote = async (employeeId: string) => {
     if (!employeeId || 
@@ -262,6 +324,7 @@ const EmployeesTab: React.FC = () => {
     }
   
     try {
+      // Save note
       const noteResponse = await fetchWithFallback<{success: boolean; message?: string}>(
         'saveEmployeeNote', 
         {
@@ -275,13 +338,21 @@ const EmployeesTab: React.FC = () => {
         showNotification('error', noteResponse.message || 'Nepodařilo se uložit poznámku');
         return;
       }
+      
+      // Get the level/grade for the selected role
+      let newLevel = selectedEmployee.level;
+      const matchingGrade = allJobGrades.find(grade => grade.name === formData.role);
+      if (matchingGrade) {
+        newLevel = matchingGrade.grade;
+      }
   
+      // Update employee details with new role and salary
       const detailsResponse = await fetchWithFallback<{success: boolean; message?: string}>(
         'setEmployeeDetails', 
         {
           identifier: employeeId,
           job: getFallbackJob(),
-          level: selectedEmployee.level,
+          level: newLevel, // Use the level from matching grade
           salary: formData.salary
         }
       );
@@ -289,7 +360,7 @@ const EmployeesTab: React.FC = () => {
       if (detailsResponse.success) {
         setEmployees(prev => prev.map(emp => 
           safelyExtractEmployeeId(emp) === employeeId 
-            ? { ...emp, role: formData.role, salary: formData.salary } 
+            ? { ...emp, role: formData.role, salary: formData.salary, level: newLevel } 
             : emp
         ));
         
@@ -343,8 +414,6 @@ const EmployeesTab: React.FC = () => {
     const matchesRole = roleFilter === '' || emp.role === roleFilter;
     return matchesSearch && matchesRole;
   });
-  
-  const uniqueRoles = Array.from(new Set(employees.map(emp => emp.role)));
   
   if (loading) return <div>Načítání zaměstnanců...</div>;
 
@@ -519,9 +588,15 @@ const EmployeesTab: React.FC = () => {
                       value={formData.role}
                       onChange={handleFormChange}
                     >
-                      {uniqueRoles.map((role, index) => (
-                        <option key={index} value={role}>{role}</option>
-                      ))}
+                      {allJobGrades.length > 0 ? (
+                        allJobGrades.map((grade) => (
+                          <option key={grade.grade} value={grade.name}>{grade.label}</option>
+                        ))
+                      ) : (
+                        uniqueRoles.map((role, index) => (
+                          <option key={index} value={role}>{role}</option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
