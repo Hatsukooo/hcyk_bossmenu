@@ -126,28 +126,63 @@ local function handleAsyncCallback(cb, success, message)
     })
 end
 
-lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, identifier, grade)
+lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, player, grade)
     local xPlayer = ESX.GetPlayerFromId(source)
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
-    local targetPlayer = ESX.GetPlayerFromIdentifier(identifier)
+    grade = tonumber(grade) or 0
+    
+    local targetPlayer = ESX.GetPlayerFromId(player)
+    
+    print("[HCYK_BOSSACTIONS] Hire request - Source:", source, "Job:", job, "Player:", player, "Grade:", grade)
+    print("[HCYK_BOSSACTIONS] Target player found:", targetPlayer ~= nil)
+    
     if targetPlayer then
         targetPlayer.setJob(job, grade)
-        
         TriggerClientEvent('esx:showNotification', targetPlayer.source, 'Byl jsi zaměstnán jako ' .. job)
-        
         return {success = true, message = "Hráč byl úspěšně zaměstnán"}
     else
-        local result = MySQL.Sync.execute('UPDATE users SET job = ?, job_grade = ? WHERE identifier = ?', {
-            job, grade, identifier
-        })
+        local identifier = nil
         
-        if result and result > 0 then
+        local idResult = MySQL.Sync.fetchAll("SELECT identifier FROM users WHERE id = ?", {player})
+        
+        if idResult and #idResult > 0 then
+            identifier = idResult[1].identifier
+            print("[HCYK_BOSSACTIONS] Found identifier for player ID:", player, "->", identifier)
+        else
+            identifier = player
+            print("[HCYK_BOSSACTIONS] Using direct ID:", identifier)
+        end
+        
+        if type(identifier) == "string" and identifier:match("char%d+:") then
+            print("[HCYK_BOSSACTIONS] Using character identifier:", identifier)
+            
+            local userExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM users WHERE identifier = ?", {identifier})
+            if not userExists or userExists == 0 then
+                return {success = false, message = "Hráč nebyl nalezen s tímto identifikátorem"}
+            end
+        elseif tonumber(identifier) ~= nil then
+            local numericIdResult = MySQL.Sync.fetchAll("SELECT identifier FROM users WHERE id = ?", {identifier})
+            if numericIdResult and #numericIdResult > 0 then
+                identifier = numericIdResult[1].identifier
+                print("[HCYK_BOSSACTIONS] Converted numeric ID to identifier:", identifier)
+            else
+                return {success = false, message = "Hráč nebyl nalezen s tímto ID"}
+            end
+        end
+        
+        local success = pcall(function()
+            return MySQL.Sync.execute('UPDATE users SET job = ?, job_grade = ? WHERE identifier = ?', {
+                job, grade, identifier
+            })
+        end)
+        
+        if success then
             return {success = true, message = "Hráč byl úspěšně zaměstnán"}
         else
-            return {success = false, message = "Hráč nebyl nalezen"}
+            return {success = false, message = "Databázová chyba při zaměstnávání hráče"}
         end
     end
 end)

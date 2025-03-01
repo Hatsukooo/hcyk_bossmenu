@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import { useDialog } from '../context/DialogContext';
 import { fetchWithFallback, getFallbackJob } from '../utils/api';
-
 import { safelyExtractEmployeeId, convertEmployeeData, Employee, RawEmployee } from '../utils/employee-data-fix';
-
 interface HistoryItem {
   date: string;
   type: string;
@@ -49,6 +47,8 @@ const EmployeesTab: React.FC = () => {
     salary: 0,
     note: ''
   });
+  const pendingNoteRequests = useRef<string[]>([]);
+
   const { showNotification } = useNotification();
   const { showDialog } = useDialog();
 
@@ -156,29 +156,44 @@ const EmployeesTab: React.FC = () => {
       
       console.log("[DEBUG] Selected employee ID after processing:", employeeIdString);
       
-      setFormData({
-        role: selectedEmployee.role,
-        salary: selectedEmployee.salary,
-        note: employeeNotes[employeeIdString] || ''
+      setFormData(prevData => {
+        if (prevData.role !== selectedEmployee.role || 
+            prevData.salary !== selectedEmployee.salary ||
+            prevData.note !== (employeeNotes[employeeIdString] || '')) {
+          return {
+            role: selectedEmployee.role,
+            salary: selectedEmployee.salary,
+            note: employeeNotes[employeeIdString] || ''
+          };
+        }
+        return prevData; 
       });
       
-      if (!employeeNotes[employeeIdString]) {
+      if (employeeNotes[employeeIdString] === undefined) {
+        console.log('[DEBUG] Note not found in state, fetching note for:', employeeIdString);
         fetchEmployeeNote(employeeIdString);
+      } else {
+        console.log('[DEBUG] Using cached note for employee:', employeeIdString);
       }
     }
-  }, [selectedEmployee, employeeNotes]);
+  }, [selectedEmployee]); 
   
   const fetchEmployeeNote = async (employeeId: string) => {
+    if (!employeeId || 
+        employeeId === 'undefined' || 
+        employeeId === 'null' || 
+        employeeId === 'NaN' ||
+        pendingNoteRequests.current.includes(employeeId)) {
+      return;
+    }
+    
+    pendingNoteRequests.current.push(employeeId);
+    
     try {
-      if (!employeeId || employeeId === 'undefined' || employeeId === 'null' || employeeId === 'NaN') {
-        console.error('[DEBUG] Invalid employee ID for fetchEmployeeNote:', employeeId);
-        return;
-      }
-      
       console.log('[DEBUG] Fetching employee note for:', employeeId);
       
       const response = await safelyFetchData<{success: boolean; note: string}>(
-        'hcyk_bossactions:getEmployeeNote',
+        'getEmployeeNote',
         {
           job: getFallbackJob(),
           identifier: employeeId
@@ -194,11 +209,12 @@ const EmployeesTab: React.FC = () => {
       }));
     } catch (err) {
       console.error('[DEBUG] Error fetching employee note:', err);
-
       setEmployeeNotes(prev => ({
         ...prev,
         [employeeId]: ''
       }));
+    } finally {
+      pendingNoteRequests.current = pendingNoteRequests.current.filter(id => id !== employeeId);
     }
   };
   

@@ -63,29 +63,28 @@ end)
 
 RegisterNUICallback('hireEmployee', function(data, cb)
     debugPrint('Hiring employee for job', data.job, 'position', data.position)
-    
     if not data.job or not data.player or not data.position then
-        cb({success = false, message = "Neúplná data pro přijetí zaměstnance"})
-        return
+        return cb({success = false, message = "Chybí potřebná data"})
     end
     
-    local player = tonumber(data.player)
+    local playerID = tonumber(data.player)
     local position = tonumber(data.position)
     
-    if not player or not position then
-        cb({success = false, message = "Neplatné ID hráče nebo pozice"})
-        return
+    if not playerID or not position then
+        return cb({success = false, message = "Neplatné ID hráče nebo pozice"})
     end
     
-    lib.callback('hcyk_bossactions:hireEmployee', 1000, function(result)
+    debugPrint('Hiring player ID', playerID, 'as', data.job, 'grade', position)
+    
+    lib.callback('hcyk_bossactions:hireEmployee', 5000, function(result)
         if not result then
-            cb({success = false, message = "Došlo k chybě při přijímání zaměstnance"})
-            return
+            return cb({success = false, message = "Neznámá chyba při zaměstnávání"})
         end
         
         cb(result)
-    end, data.job, player, position)
+    end, data.job, playerID, position)
 end)
+
 
 local function safeToString(value)
     if value == nil then
