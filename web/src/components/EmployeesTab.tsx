@@ -270,11 +270,14 @@ const EmployeesTab: React.FC = () => {
     
     try {
       console.log('[DEBUG] Fetching employee note for:', employeeId);
+      const job = getFallbackJob();
+      
+      const noteKey = `${employeeId}_${job}`;
       
       const response = await safelyFetchData<{success: boolean; note: string}>(
         'getEmployeeNote',
         {
-          job: getFallbackJob(),
+          job: job,
           identifier: employeeId
         },
         { success: true, note: '' } 
@@ -284,16 +287,12 @@ const EmployeesTab: React.FC = () => {
       
       setEmployeeNotes(prev => ({
         ...prev,
-        [employeeId]: response.note || ''
+        [noteKey]: response.note || ''
       }));
     } catch (err) {
       console.error('[DEBUG] Error fetching employee note:', err);
-      setEmployeeNotes(prev => ({
-        ...prev,
-        [employeeId]: ''
-      }));
     } finally {
-      pendingNoteRequests.current = pendingNoteRequests.current.filter((id: string) => id !== employeeId);
+      pendingNoteRequests.current = pendingNoteRequests.current.filter(id => id !== employeeId);
     }
   };
   
@@ -341,55 +340,117 @@ const EmployeesTab: React.FC = () => {
     }
   
     try {
-      // Save note
-      const noteResponse = await fetchWithFallback<{success: boolean; message?: string}>(
-        'saveEmployeeNote', 
-        {
-          job: getFallbackJob(),
-          identifier: employeeId,
-          note: formData.note
-        }
-      );
-  
-      if (!noteResponse.success) {
-        showNotification('error', noteResponse.message || 'Nepodařilo se uložit poznámku');
-        return;
-      }
+      const job = getFallbackJob();
+      let hasChanges = false;
+      let positionChanged = false;
+      let noteChanged = false;
+      let salaryChanged = false;
       
-      // Get the level/grade for the selected role
-      let newLevel = selectedEmployee.level;
-      const matchingGrade = allJobGrades.find(grade => grade.name === formData.role);
-      if (matchingGrade) {
-        newLevel = matchingGrade.grade;
-      }
-  
-      // Update employee details with new role and salary
-      const detailsResponse = await fetchWithFallback<{success: boolean; message?: string}>(
-        'setEmployeeDetails', 
-        {
-          identifier: employeeId,
-          job: getFallbackJob(),
-          level: newLevel, // Use the level from matching grade
-          salary: formData.salary
+      const isRoleChanged = formData.role !== selectedEmployee.role;
+      const isSalaryChanged = formData.salary !== selectedEmployee.salary;
+      
+      const noteKey = `${employeeId}_${job}`;
+      const currentNote = employeeNotes[noteKey] || '';
+      const isNoteChanged = formData.note !== currentNote;
+      
+      if (isNoteChanged) {
+        noteChanged = true;
+        const noteResponse = await fetchWithFallback<{success: boolean; message?: string}>(
+          'saveEmployeeNote', 
+          {
+            job: job,
+            identifier: employeeId,
+            note: formData.note
+          }
+        );
+    
+        if (!noteResponse.success) {
+          showNotification('error', noteResponse.message || 'Nepodařilo se uložit poznámku');
+          return;
         }
-      );
-  
-      if (detailsResponse.success) {
-        setEmployees(prev => prev.map(emp => 
-          safelyExtractEmployeeId(emp) === employeeId 
-            ? { ...emp, role: formData.role, salary: formData.salary, level: newLevel } 
-            : emp
-        ));
         
         setEmployeeNotes(prev => ({
           ...prev,
-          [String(employeeId)]: formData.note
+          [noteKey]: formData.note
         }));
         
+        hasChanges = true;
+      }
+      
+      if (isRoleChanged) {
+        let newLevel = selectedEmployee.level;
+        const matchingGrade = allJobGrades.find(grade => grade.name === formData.role);
+        if (matchingGrade) {
+          newLevel = matchingGrade.grade;
+          
+          const gradeResponse = await fetchWithFallback<{success: boolean; message?: string; changed?: boolean}>(
+            'setGrade', 
+            {
+              identifier: employeeId,
+              job: job,
+              level: newLevel
+            }
+          );
+          
+          if (!gradeResponse.success) {
+            showNotification('error', gradeResponse.message || 'Nepodařilo se změnit pozici');
+            return;
+          }
+          
+          positionChanged = gradeResponse.changed === true;
+          
+          if (positionChanged) {
+            setEmployees(prev => prev.map(emp => 
+              safelyExtractEmployeeId(emp) === employeeId 
+                ? { ...emp, role: formData.role, level: newLevel } 
+                : emp
+            ));
+            
+            hasChanges = true;
+          }
+        }
+      }
+      
+      if (isSalaryChanged) {
+        salaryChanged = true;
+        
+        const salaryResponse = await fetchWithFallback<{success: boolean; message?: string}>(
+          'setSalary', 
+          {
+            job: job,
+            level: selectedEmployee.level, 
+            salary: formData.salary
+          }
+        );
+        
+        if (!salaryResponse.success) {
+          showNotification('error', salaryResponse.message || 'Nepodařilo se změnit plat');
+          return;
+        }
+        
+        setEmployees(prev => prev.map(emp => 
+          safelyExtractEmployeeId(emp) === employeeId 
+            ? { ...emp, salary: formData.salary } 
+            : emp
+        ));
+        
+        hasChanges = true;
+      }
+      
+      if (hasChanges) {
         setFormChanged(false);
-        showNotification('success', 'Změny uloženy úspěšně');
+        
+        if (positionChanged) {
+          showNotification('success', 'Pozice zaměstnance byla změněna');
+        } else if (salaryChanged && !positionChanged) {
+          showNotification('success', 'Plat zaměstnance byl změněn');
+        } else if (noteChanged && !positionChanged && !salaryChanged) {
+          showNotification('success', 'Poznámka byla uložena');
+        } else {
+          showNotification('success', 'Změny byly uloženy');
+        }
       } else {
-        showNotification('error', detailsResponse.message || 'Nepodařilo se uložit změny');
+        setFormChanged(false);
       }
     } catch (err) {
       console.error('[DEBUG] Error saving changes:', err);

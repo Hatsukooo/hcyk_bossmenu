@@ -252,20 +252,39 @@ lib.callback.register('hcyk_bossactions:setGrade', function(source, job, identif
         return {success = false, message = "Nemáš oprávnění"}
     end
     
+    -- First, check if the player is online
     local targetPlayer = ESX.GetPlayerFromIdentifier(identifier)
     if targetPlayer then
+        -- Check if the grade is actually changing
+        if targetPlayer.getJob().grade == grade then
+            -- Grade is the same, no need to update
+            return {success = true, message = "Pozice hráče zůstává stejná", changed = false}
+        end
+        
+        -- Grade is changing, update it
         targetPlayer.setJob(job, grade)
         
         TriggerClientEvent('esx:showNotification', targetPlayer.source, 'Tvá pozice ve firmě ' .. job .. ' byla změněna')
         
-        return {success = true, message = "Pozice hráče byla úspěšně změněna"}
+        return {success = true, message = "Pozice hráče byla úspěšně změněna", changed = true}
     else
+        -- Player is offline, check current grade in database first
+        local currentGrade = MySQL.Sync.fetchScalar('SELECT job_grade FROM users WHERE identifier = ? AND job = ?', {
+            identifier, job
+        })
+        
+        -- If current grade is the same as requested grade, no need to update
+        if currentGrade == grade then
+            return {success = true, message = "Pozice hráče zůstává stejná", changed = false}
+        end
+        
+        -- Current grade is different, update it
         local result = MySQL.Sync.execute('UPDATE users SET job_grade = ? WHERE identifier = ? AND job = ?', {
             grade, identifier, job
         })
         
         if result and result > 0 then
-            return {success = true, message = "Pozice hráče byla úspěšně změněna"}
+            return {success = true, message = "Pozice hráče byla úspěšně změněna", changed = true}
         else
             return {success = false, message = "Hráč nebyl nalezen nebo není ve vaší firmě"}
         end
