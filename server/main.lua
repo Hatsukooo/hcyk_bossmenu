@@ -1,7 +1,7 @@
 local function logError(message, ...)
     local args = {...}
     local formatted = string.format(message, table.unpack(args))
-    print('^1[HCYK_BOSSACTIONS] ERROR: ' .. formatted .. '^7')
+    --print('^1[HCYK_BOSSACTIONS] ERROR: ' .. formatted .. '^7')
 end
 
 local function checkBossPermissions(source, job)
@@ -122,7 +122,7 @@ AddEventHandler('esx:playerLoaded', function(source, xPlayer)
     local identifier = xPlayer.identifier
     
     if identifier then
-        print("[HCYK_BOSSACTIONS] Player session started for: " .. identifier)
+        --print("[HCYK_BOSSACTIONS] Player session started for: " .. identifier)
         playerSessions[src] = {
             identifier = identifier,
             startTime = os.time()
@@ -138,7 +138,7 @@ AddEventHandler('playerDropped', function()
             MySQL.Async.execute('INSERT INTO player_playtime (identifier, timestamp, duration) VALUES (?, ?, ?)',
                 {playerSessions[src].identifier, playerSessions[src].startTime, duration})
             
-            print("[HCYK_BOSSACTIONS] Player session ended for: " .. playerSessions[src].identifier .. " (Duration: " .. duration .. " seconds)")
+            --print("[HCYK_BOSSACTIONS] Player session ended for: " .. playerSessions[src].identifier .. " (Duration: " .. duration .. " seconds)")
         end
         playerSessions[src] = nil
     end
@@ -151,7 +151,7 @@ CreateThread(function()
     for _, playerId in ipairs(players) do
         local xPlayer = ESX.GetPlayerFromId(playerId)
         if xPlayer and not playerSessions[playerId] then
-            print("[HCYK_BOSSACTIONS] Adding session for already connected player: " .. xPlayer.identifier)
+            --print("[HCYK_BOSSACTIONS] Adding session for already connected player: " .. xPlayer.identifier)
             playerSessions[playerId] = {
                 identifier = xPlayer.identifier,
                 startTime = os.time()
@@ -169,7 +169,7 @@ CreateThread(function()
                 {session.identifier, session.startTime, duration})
                 
             playerSessions[src].startTime = currentTime
-            print("[HCYK_BOSSACTIONS] Updated playtime for: " .. session.identifier .. " (Duration: " .. duration .. " seconds)")
+            --print("[HCYK_BOSSACTIONS] Updated playtime for: " .. session.identifier .. " (Duration: " .. duration .. " seconds)")
         end
     end
 end)

@@ -49,7 +49,7 @@ function GetEmployees(job)
     end)
     
     if success and result and #result > 0 then
-        print("[HCYK_BOSSACTIONS] First query successful, found " .. #result .. " employees")
+        --print("[HCYK_BOSSACTIONS] First query successful, found " .. #result .. " employees")
         return result
     end
     
@@ -77,7 +77,7 @@ function GetEmployees(job)
     end)
     
     if success and result and #result > 0 then
-        print("[HCYK_BOSSACTIONS] Second query successful, found " .. #result .. " employees")
+        --print("[HCYK_BOSSACTIONS] Second query successful, found " .. #result .. " employees")
         return result
     end
     
@@ -111,11 +111,11 @@ function GetEmployees(job)
     end)
     
     if success and employees and #employees > 0 then
-        print("[HCYK_BOSSACTIONS] Third query successful, found " .. #employees .. " employees")
+        --print("[HCYK_BOSSACTIONS] Third query successful, found " .. #employees .. " employees")
         return employees
     end
     
-    print("[HCYK_BOSSACTIONS] All queries failed, returning empty employee list")
+    --print("[HCYK_BOSSACTIONS] All queries failed, returning empty employee list")
     return {}
 end
 
@@ -136,8 +136,8 @@ lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, pla
     
     local targetPlayer = ESX.GetPlayerFromId(player)
     
-    print("[HCYK_BOSSACTIONS] Hire request - Source:", source, "Job:", job, "Player:", player, "Grade:", grade)
-    print("[HCYK_BOSSACTIONS] Target player found:", targetPlayer ~= nil)
+    --print("[HCYK_BOSSACTIONS] Hire request - Source:", source, "Job:", job, "Player:", player, "Grade:", grade)
+    --print("[HCYK_BOSSACTIONS] Target player found:", targetPlayer ~= nil)
     
     if targetPlayer then
         targetPlayer.setJob(job, grade)
@@ -150,14 +150,14 @@ lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, pla
         
         if idResult and #idResult > 0 then
             identifier = idResult[1].identifier
-            print("[HCYK_BOSSACTIONS] Found identifier for player ID:", player, "->", identifier)
+            --print("[HCYK_BOSSACTIONS] Found identifier for player ID:", player, "->", identifier)
         else
             identifier = player
-            print("[HCYK_BOSSACTIONS] Using direct ID:", identifier)
+            --print("[HCYK_BOSSACTIONS] Using direct ID:", identifier)
         end
         
         if type(identifier) == "string" and identifier:match("char%d+:") then
-            print("[HCYK_BOSSACTIONS] Using character identifier:", identifier)
+            --print("[HCYK_BOSSACTIONS] Using character identifier:", identifier)
             
             local userExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM users WHERE identifier = ?", {identifier})
             if not userExists or userExists == 0 then
@@ -167,7 +167,7 @@ lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, pla
             local numericIdResult = MySQL.Sync.fetchAll("SELECT identifier FROM users WHERE id = ?", {identifier})
             if numericIdResult and #numericIdResult > 0 then
                 identifier = numericIdResult[1].identifier
-                print("[HCYK_BOSSACTIONS] Converted numeric ID to identifier:", identifier)
+                --print("[HCYK_BOSSACTIONS] Converted numeric ID to identifier:", identifier)
             else
                 return {success = false, message = "Hráč nebyl nalezen s tímto ID"}
             end
@@ -213,8 +213,8 @@ lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, ide
         return {success = false, message = "Neplatný identifikátor zaměstnance"}
     end
     
-    print("[HCYK_BOSSACTIONS] Fire request: ", source, job, identifier)
-    print("[HCYK_BOSSACTIONS] Player job data: ", xPlayer.getJob().name, xPlayer.getJob().grade_name)
+    --print("[HCYK_BOSSACTIONS] Fire request: ", source, job, identifier)
+    --print("[HCYK_BOSSACTIONS] Player job data: ", xPlayer.getJob().name, xPlayer.getJob().grade_name)
     
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}

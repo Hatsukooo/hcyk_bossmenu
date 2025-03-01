@@ -67,19 +67,19 @@ const EmployeesTab: React.FC = () => {
 
       const text = await response.text();
       if (!text || text.trim() === '') {
-        console.warn(`[DEBUG] Empty response from ${endpoint}`);
+        //console.warn(`[DEBUG] Empty response from ${endpoint}`);
         return defaultValue;
       }
 
       try {
         return JSON.parse(text) as T;
       } catch (e) {
-        console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
-        console.error(`[DEBUG] Attempted to parse:`, text);
+        //console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
+        //console.error(`[DEBUG] Attempted to parse:`, text);
         return defaultValue;
       }
     } catch (error) {
-      console.warn(`[DEBUG] Error fetching ${endpoint}:`, error);
+      //console.warn(`[DEBUG] Error fetching ${endpoint}:`, error);
       return defaultValue;
     }
   };
@@ -91,7 +91,7 @@ const EmployeesTab: React.FC = () => {
         setError(null);
         
         const job = getFallbackJob();
-        console.log('[DEBUG] Fetching employees for job:', job);
+        //console.log('[DEBUG] Fetching employees for job:', job);
         
         // Fetch job grades/ranks first
         const ranks = await fetchWithFallback<Array<{grade: number, name: string, label: string, salary: number}>>(
@@ -100,7 +100,7 @@ const EmployeesTab: React.FC = () => {
           true
         );
         
-        console.log('[DEBUG] Job ranks received:', JSON.stringify(ranks));
+        //console.log('[DEBUG] Job ranks received:', JSON.stringify(ranks));
         if (ranks && ranks.length > 0) {
           // Sort ranks by grade
           const sortedRanks = ranks.sort((a, b) => a.grade - b.grade);
@@ -113,7 +113,7 @@ const EmployeesTab: React.FC = () => {
           true 
         );
         
-        console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
+        //console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
        
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
@@ -126,13 +126,13 @@ const EmployeesTab: React.FC = () => {
           true
         );
         
-        console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
+        //console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
         
         const formattedEmployees = data.map(emp => {
-          console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
+          //console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
           const convertedEmp = convertEmployeeData(emp);
           const identifier = safelyExtractEmployeeId(emp);
-          console.log('[DEBUG] Extracted identifier:', identifier);
+          //console.log('[DEBUG] Extracted identifier:', identifier);
           const weeklyPlaytime = playtimeData && identifier && playtimeData[String(identifier)] 
             ? playtimeData[String(identifier)] 
             : 0;
@@ -143,10 +143,10 @@ const EmployeesTab: React.FC = () => {
           };
         });
         
-        console.log('[DEBUG] Formatted employees:', JSON.stringify(formattedEmployees));
+        //console.log('[DEBUG] Formatted employees:', JSON.stringify(formattedEmployees));
         setEmployees(formattedEmployees);
       } catch (err) {
-        console.error('[DEBUG] Error fetching employees:', err);
+        //console.error('[DEBUG] Error fetching employees:', err);
         setError('Chyba při načítání zaměstnanců');
       } finally {
         setLoading(false);
@@ -158,18 +158,18 @@ const EmployeesTab: React.FC = () => {
   
   useEffect(() => {
     if (selectedEmployee) {
-      console.log('[DEBUG] Selected employee in useEffect:', JSON.stringify(selectedEmployee));
+      //console.log('[DEBUG] Selected employee in useEffect:', JSON.stringify(selectedEmployee));
       
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
       if (!employeeId) {
-        console.error("[DEBUG] Invalid employee ID:", JSON.stringify(selectedEmployee));
+        //console.error("[DEBUG] Invalid employee ID:", JSON.stringify(selectedEmployee));
         return;
       }
       
       const employeeIdString = String(employeeId);
       
-      console.log("[DEBUG] Selected employee ID after processing:", employeeIdString);
+      //console.log("[DEBUG] Selected employee ID after processing:", employeeIdString);
       
       setFormData(prevData => {
         if (prevData.role !== selectedEmployee.role || 
@@ -185,10 +185,10 @@ const EmployeesTab: React.FC = () => {
       });
       
       if (employeeNotes[employeeIdString] === undefined) {
-        console.log('[DEBUG] Note not found in state, fetching note for:', employeeIdString);
+        //console.log('[DEBUG] Note not found in state, fetching note for:', employeeIdString);
         fetchEmployeeNote(employeeIdString);
       } else {
-        console.log('[DEBUG] Using cached note for employee:', employeeIdString);
+        //console.log('[DEBUG] Using cached note for employee:', employeeIdString);
       }
     }
   }, [selectedEmployee]); 
@@ -205,7 +205,7 @@ const EmployeesTab: React.FC = () => {
     pendingNoteRequests.current.push(employeeId);
     
     try {
-      console.log('[DEBUG] Fetching employee note for:', employeeId);
+      //console.log('[DEBUG] Fetching employee note for:', employeeId);
       
       const response = await safelyFetchData<{success: boolean; note: string}>(
         'getEmployeeNote',
@@ -216,14 +216,14 @@ const EmployeesTab: React.FC = () => {
         { success: true, note: '' } 
       );
       
-      console.log('[DEBUG] Employee note response:', JSON.stringify(response));
+      //console.log('[DEBUG] Employee note response:', JSON.stringify(response));
       
       setEmployeeNotes(prev => ({
         ...prev,
         [employeeId]: response.note || ''
       }));
     } catch (err) {
-      console.error('[DEBUG] Error fetching employee note:', err);
+      //console.error('[DEBUG] Error fetching employee note:', err);
       setEmployeeNotes(prev => ({
         ...prev,
         [employeeId]: ''
@@ -277,25 +277,14 @@ const EmployeesTab: React.FC = () => {
     }
   
     try {
+      // First save the note separately
+      await handleSaveNote();
+      
       // Find the corresponding grade level for the selected role
       const selectedGrade = jobGrades.find(grade => grade.name === formData.role);
       const gradeLevel = selectedGrade ? selectedGrade.grade : selectedEmployee.level;
       
-      console.log('[DEBUG] Saving employee with role:', formData.role, 'grade level:', gradeLevel);
-      
-      const noteResponse = await fetchWithFallback<{success: boolean; message?: string}>(
-        'saveEmployeeNote', 
-        {
-          job: getFallbackJob(),
-          identifier: employeeId,
-          note: formData.note
-        }
-      );
-  
-      if (!noteResponse.success) {
-        showNotification('error', noteResponse.message || 'Nepodařilo se uložit poznámku');
-        return;
-      }
+      //console.log('[DEBUG] Saving employee with role:', formData.role, 'grade level:', gradeLevel);
   
       const detailsResponse = await fetchWithFallback<{success: boolean; message?: string}>(
         'setEmployeeDetails', 
@@ -315,47 +304,42 @@ const EmployeesTab: React.FC = () => {
             : emp
         ));
         
-        setEmployeeNotes(prev => ({
-          ...prev,
-          [String(employeeId)]: formData.note
-        }));
-        
         setFormChanged(false);
         showNotification('success', 'Změny uloženy úspěšně');
       } else {
         showNotification('error', detailsResponse.message || 'Nepodařilo se uložit změny');
       }
     } catch (err) {
-      console.error('[DEBUG] Error saving changes:', err);
+      //console.error('[DEBUG] Error saving changes:', err);
       showNotification('error', 'Nastala chyba při ukládání změn');
     }
   };
   
   const handleOpenDetail = (employee: Employee) => {
-    console.log('[DEBUG] handleOpenDetail called with employee:', JSON.stringify(employee));
+    //console.log('[DEBUG] handleOpenDetail called with employee:', JSON.stringify(employee));
     
     if (!employee) {
-      console.error('[DEBUG] Invalid employee data (null or undefined)');
+      //console.error('[DEBUG] Invalid employee data (null or undefined)');
       return;
     }
     
     try {
       const cleanEmployee = convertEmployeeData(employee);
-      console.log('[DEBUG] Converted employee:', JSON.stringify(cleanEmployee));
+      //console.log('[DEBUG] Converted employee:', JSON.stringify(cleanEmployee));
       
       const employeeId = safelyExtractEmployeeId(cleanEmployee);
       if (!employeeId) {
-        console.error('[DEBUG] Failed to extract valid employee ID');
+        //console.error('[DEBUG] Failed to extract valid employee ID');
         showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
         return;
       }
       
-      console.log('[DEBUG] Opening detail for employee ID:', employeeId);
+      //console.log('[DEBUG] Opening detail for employee ID:', employeeId);
       setSelectedEmployee(cleanEmployee);
       setActiveTab("historie");
       setShowDetailModal(true);
     } catch (err) {
-      console.error('[DEBUG] Error in handleOpenDetail:', err);
+      //console.error('[DEBUG] Error in handleOpenDetail:', err);
       showNotification('error', 'Nastala chyba při otevírání detailu');
     }
   };
@@ -399,7 +383,7 @@ const EmployeesTab: React.FC = () => {
       <div className="employees-list">
         {filteredEmployees.map(emp => {
           const empId = safelyExtractEmployeeId(emp);
-          console.log('[DEBUG] Rendering employee card with ID:', empId);
+          //console.log('[DEBUG] Rendering employee card with ID:', empId);
           
           return (
             <div key={String(empId || Math.random())} className="employee-card">
@@ -416,7 +400,7 @@ const EmployeesTab: React.FC = () => {
               <div className="employee-actions">
                 <button 
                   onClick={() => {
-                    console.log('[DEBUG] Edit button clicked for employee:', JSON.stringify(emp));
+                    //console.log('[DEBUG] Edit button clicked for employee:', JSON.stringify(emp));
                     handleOpenDetail(emp);
                   }} 
                   className="action-btn"
@@ -516,6 +500,15 @@ const EmployeesTab: React.FC = () => {
                           onChange={handleFormChange}
                           placeholder="Přidat poznámku..."
                         ></textarea>
+                        <button 
+                          className="action-btn note-save-btn" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSaveNote();
+                          }}
+                        >
+                          Uložit poznámku
+                        </button>
                       </div>
                     </div>
                   )}

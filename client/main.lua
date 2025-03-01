@@ -333,20 +333,6 @@ RegisterNUICallback('getNearbyPlayers', function(data, cb)
 end)
 
 RegisterNUICallback('showNotification', function(data, cb)
-    local type = data.type or 'info'
-    local message = data.message or ''
-    
-    if type == 'success' then
-        print("ESX.ShowNotification(".. message..")")
-    elseif type == 'error' then
-        
-        print("ESX.ShowNotification('~r~' ".. message..")")
-    elseif type == 'warning' then
-        print("ESX.ShowNotification('~y~' ".. message..")")
-    else
-        print("ESX.ShowNotification(".. message..")")
-    end
-    
     cb({success = true})
 end)
 

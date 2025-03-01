@@ -5,7 +5,7 @@ SafeMySQL = {}
 local function logError(message, ...)
     local args = {...}
     local formatted = string.format(message, table.unpack(args))
-    print('^1[HCYK_BOSSACTIONS] ERROR: ' .. formatted .. '^7')
+    --print('^1[HCYK_BOSSACTIONS] ERROR: ' .. formatted .. '^7')
 end
 
 SafeMySQL.fetch = function(query, params, defaultReturn)

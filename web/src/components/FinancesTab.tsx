@@ -50,7 +50,7 @@ const FinancesTab: React.FC = () => {
           netProfit: statsData.netProfit || 0
         });
       } catch (err) {
-        console.error('Chyba při načítání financí:', err);
+        //console.error('Chyba při načítání financí:', err);
         setError('Chyba při načítání financí');
       } finally {
         setLoading(false);
