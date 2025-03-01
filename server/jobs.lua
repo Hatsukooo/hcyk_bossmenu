@@ -374,8 +374,11 @@ end)
 
 lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
     local xPlayer = ESX.GetPlayerFromId(source)
+    
     if type(job) == "table" and job.job then
         job = job.job
+    elseif type(job) == "table" and job.name then
+        job = job.name
     end
     
     identifier = validateIdentifier(identifier)
@@ -387,7 +390,7 @@ lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, 
         return {success = false, message = "Nemáš oprávnění"}
     end
     
-    local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ?", {identifier})
+    local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ? AND job_name = ?", {identifier, job})
 
     if result and #result > 0 then
         return {success = true, note = result[1].note}
@@ -401,6 +404,8 @@ lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job,
     
     if type(job) == "table" and job.job then
         job = job.job
+    elseif type(job) == "table" and job.name then
+        job = job.name
     end
     
     identifier = validateIdentifier(identifier)
@@ -413,13 +418,19 @@ lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job,
     end
     
     local success = pcall(function()
-        local x = MySQL.Sync.execute(
-            "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
-            "ON DUPLICATE KEY UPDATE note = ?", 
-            {identifier, note, note}
+        local rowsAffected = MySQL.Sync.execute(
+            "UPDATE employee_notes SET note = ? WHERE employee_identifier = ? AND job_name = ?", 
+            {note, identifier, job}
         )
-        print(ESX.DumpTable(x), identifier, note, note)
+        
+        if rowsAffected == 0 then
+            MySQL.Sync.execute(
+                "INSERT INTO employee_notes (employee_identifier, job_name, note) VALUES (?, ?, ?)", 
+                {identifier, job, note}
+            )
+        end
     end)
+    
     if success then
         return {success = true, message = "Poznámka byla úspěšně uložena"}
     else

@@ -212,41 +212,46 @@ const EmployeesTab: React.FC = () => {
       }
       
       const employeeIdString = String(employeeId);
+      const job = getFallbackJob();
+      const noteKey = `${employeeIdString}_${job}`;
       
-      console.log("[DEBUG] Selected employee ID after processing:", employeeIdString);
+      console.log("[DEBUG] Selected employee ID after processing:", employeeIdString, "job:", job);
       
       setFormData(prevData => {
         if (prevData.role !== selectedEmployee.role || 
             prevData.salary !== selectedEmployee.salary ||
-            prevData.note !== (employeeNotes[employeeIdString] || '')) {
+            prevData.note !== (employeeNotes[noteKey] || '')) {
           return {
             role: selectedEmployee.role,
             salary: selectedEmployee.salary,
-            note: employeeNotes[employeeIdString] || ''
+            note: employeeNotes[noteKey] || ''
           };
         }
         return prevData; 
       });
       
-      if (employeeNotes[employeeIdString] === undefined) {
+      if (employeeNotes[noteKey] === undefined) {
         console.log('[DEBUG] Note not found in state, fetching note for:', employeeIdString);
         fetchEmployeeNote(employeeIdString);
       } else {
-        console.log('[DEBUG] Using cached note for employee:', employeeIdString);
+        console.log('[DEBUG] Using cached note for employee:', employeeIdString, 'job:', job);
       }
     }
   }, [selectedEmployee]);
   
-  // Update form data when employeeNotes changes
+  
   useEffect(() => {
     if (selectedEmployee) {
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
-      if (employeeId && employeeNotes[String(employeeId)] !== undefined) {
+      const job = getFallbackJob();
+      const noteKey = `${String(employeeId)}_${job}`;
+      
+      if (employeeId && employeeNotes[noteKey] !== undefined) {
         setFormData(prev => ({
           ...prev,
           role: selectedEmployee.role,
           salary: selectedEmployee.salary,
-          note: employeeNotes[String(employeeId)] || ''
+          note: employeeNotes[noteKey] || ''
         }));
       }
     }
