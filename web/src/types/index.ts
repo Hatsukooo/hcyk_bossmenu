@@ -93,7 +93,7 @@ export interface EmployeeBackend {
   grade_label?: string;
   salary?: number;
   weeklyPlaytime?: number;
-  performance?: number; // Added this line to fix TypeScript errors
+  performance?: number;
 }
 
 declare global {
@@ -105,11 +105,14 @@ declare global {
         grade_name?: string;
       };
     };
+    latestJobData?: string;
   }
 }
 
-export const getFallbackJob = () => {
-  return window.PlayerData?.job?.name || 'police';
+export const getFallbackJob = (): string => {
+  const jobFromPlayerData = window.PlayerData?.job?.name;
+  const jobFromMessage = window.latestJobData;
+  return jobFromPlayerData || jobFromMessage || "";
 };
 
 export function isEmployeeBackend(emp: any): emp is EmployeeBackend {

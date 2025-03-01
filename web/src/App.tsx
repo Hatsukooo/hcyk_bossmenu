@@ -85,6 +85,14 @@ const App: React.FC = () => {
       
       if (data.action === 'setVisible') {
         setIsMenuOpen(data.data === true);
+        
+        if (data.job) {
+          window.latestJobData = data.job;
+        }
+        
+        if (data.playerData) {
+          window.PlayerData = data.playerData;
+        }
       }
     };
     
@@ -93,7 +101,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, []);
+}, []);
   
   const renderContent = () => {
     switch(activeTab) {
