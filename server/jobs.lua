@@ -313,6 +313,7 @@ lib.callback.register('hcyk_bossactions:createRank', function(source, job, data)
     })
     
     if success then
+        ESX.RefreshJobs()
         return {success = true, message = "Hodnost byla úspěšně vytvořena"}
     else
         return {success = false, message = "Nepodařilo se vytvořit hodnost"}
@@ -330,6 +331,7 @@ lib.callback.register('hcyk_bossactions:updateRank', function(source, job, grade
     })
     
     if result then
+        ESX.RefreshJobs()
         return {success = true, message = "Hodnost byla úspěšně upravena"}
     else
         return {success = false, message = "Nepodařilo se upravit hodnost"}
@@ -352,6 +354,7 @@ lib.callback.register('hcyk_bossactions:deleteRank', function(source, job, grade
     
     if result then
         MySQL.Async.execute('UPDATE job_grades SET grade = grade - 1 WHERE job_name = ? AND grade > ?', {job, grade})
+        ESX.RefreshJobs()
         return {success = true, message = "Hodnost byla úspěšně smazána"}
     else
         return {success = false, message = "Nepodařilo se smazat hodnost"}
@@ -385,7 +388,7 @@ lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, 
     end
     
     local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ?", {identifier})
-    
+
     if result and #result > 0 then
         return {success = true, note = result[1].note}
     else
@@ -404,19 +407,18 @@ lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job,
     if not identifier then
         return {success = false, message = "Neplatný identifikátor zaměstnance"}
     end
-    
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
     local success = pcall(function()
-        MySQL.Sync.execute(
+        local x = MySQL.Sync.execute(
             "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
             "ON DUPLICATE KEY UPDATE note = ?", 
             {identifier, note, note}
         )
+        print(ESX.DumpTable(x), identifier, note, note)
     end)
-    
     if success then
         return {success = true, message = "Poznámka byla úspěšně uložena"}
     else
