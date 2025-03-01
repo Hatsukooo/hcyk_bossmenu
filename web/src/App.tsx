@@ -79,28 +79,35 @@ const App: React.FC = () => {
     };
   }, []);
   
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const data = event.data;
+useEffect(() => {
+  const handleMessage = (event: MessageEvent) => {
+    const data = event.data;
+    
+    if (data.action === 'setVisible') {
+      setIsMenuOpen(data.data === true);
       
-      if (data.action === 'setVisible') {
-        setIsMenuOpen(data.data === true);
+      if (data.job) {
+        console.log('[DEBUG] Received job data in message:', data.job);
         
-        if (data.job) {
-          window.latestJobData = data.job;
-        }
-        
-        if (data.playerData) {
-          window.PlayerData = data.playerData;
-        }
+        window.latestJobData = typeof data.job === 'string' 
+          ? data.job 
+          : (data.job.name || data.job.job || String(data.job));
+          
+        console.log('[DEBUG] Stored latestJobData as:', window.latestJobData);
       }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
+      
+      if (data.playerData) {
+        console.log('[DEBUG] Received playerData:', data.playerData);
+        window.PlayerData = data.playerData;
+      }
+    }
+  };
+  
+  window.addEventListener('message', handleMessage);
+  
+  return () => {
+    window.removeEventListener('message', handleMessage);
+  };
 }, []);
   
   const renderContent = () => {

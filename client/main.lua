@@ -46,9 +46,22 @@ CreateThread(function()
     loadBossZones()
 end)
 
+local function debugJobData(job)
+    if Config.Debug then
+        print('[HCYK_BOSSACTIONS] Job parameter check:', job)
+        print('[HCYK_BOSSACTIONS] Type:', type(job))
+        if type(job) == "table" then
+            print('[HCYK_BOSSACTIONS] Table contents:', json.encode(job))
+        end
+    end
+end
+
 RegisterNUICallback('getEmployees', function(data, cb)
     debugPrint('Fetching employees for job', data.job)
+    debugJobData(data.job)
+    
     data = normalizeJobParameter(data)
+    debugPrint('After normalization:', data.job)
     
     lib.callback('hcyk_bossactions:getEmployees', false, function(employees)
         if employees then

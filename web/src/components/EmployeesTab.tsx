@@ -89,7 +89,6 @@ const EmployeesTab: React.FC = () => {
     }
   };
 
-  // Fetch employees on component mount
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -97,14 +96,27 @@ const EmployeesTab: React.FC = () => {
         setError(null);
         
         const job = getFallbackJob();
-        console.log('[DEBUG] Fetching employees for job:', job);
+        console.log('[DEBUG] fetchEmployees - job name:', job);
+        
+        if (!job) {
+          console.error('[DEBUG] No job found, cannot fetch employees');
+          setError('Nelze načíst zaměstnance: Chybí název frakce');
+          setLoading(false);
+          return;
+        }
+        
+        const requestData = { 
+          job: job,
+          job_name: job
+        };
+        
+        console.log('[DEBUG] Sending employee request with data:', JSON.stringify(requestData));
         
         const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
-          { job }, 
+          requestData, 
           true 
         );
-        
         console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
        
         if (!data || data.length === 0) {

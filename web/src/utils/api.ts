@@ -38,11 +38,20 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
   }
 };
 
-/**
- * Get fallback job name from player data or return default
- */
+
 export const getFallbackJob = (): string => {
-  return window.PlayerData?.job?.name || 'police';
+  if (window.latestJobData && typeof window.latestJobData === 'string') {
+    console.log('[DEBUG] Using latestJobData:', window.latestJobData);
+    return window.latestJobData;
+  }
+  
+  if (window.PlayerData?.job?.name) {
+    console.log('[DEBUG] Using PlayerData job name:', window.PlayerData.job.name);
+    return window.PlayerData.job.name;
+  }
+  
+  console.log('[DEBUG] No job found, defaulting to empty string');
+  return "";
 };
 
 /**

@@ -1,7 +1,7 @@
 function OpenBossMenu(job)
     local playerJob = ESX.GetPlayerData().job
 
-    debugPrint("Attempting to open menu for job:", job, "Current menu state:", IsMenuOpen())
+    debugPrint("Attempting to open menu for job:", job, "Player's job:", playerJob.name, "Current menu state:", IsMenuOpen())
 
     if IsMenuOpen() then
         debugPrint("WARNING: Menu appears to already be open! Forcing reset...")
@@ -19,6 +19,7 @@ function OpenBossMenu(job)
     end
 
     if job ~= playerJob.name then
+        debugPrint("Job mismatch! Requested job:", job, "Player's job:", playerJob.name)
         lib.notify({
             title = 'Boss Menu',
             description = 'Nejsi boss této frakce',
@@ -28,6 +29,7 @@ function OpenBossMenu(job)
     end
     
     if playerJob.grade_name ~= 'boss' then
+        debugPrint("Grade check failed! Player's grade_name:", playerJob.grade_name)
         lib.notify({
             title = 'Boss Menu',
             description = 'Nemáš přístup k boss menu',
@@ -36,6 +38,7 @@ function OpenBossMenu(job)
         return
     end
     
+    debugPrint("Validation passed, opening menu for job:", job)
     SetMenuOpen(true)
     debugPrint("Menu state set to open:", IsMenuOpen())
     
