@@ -17,6 +17,16 @@ end
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
     PlayerData = xPlayer
+    Citizen.Wait(1000)
+    SendNUIMessage({
+        action = 'initData',
+        playerData = {
+            job = xPlayer.job.name,
+            grade = xPlayer.job.grade,
+            grade_name = xPlayer.job.grade_name
+        }
+    })
+
 end)
 
 RegisterNetEvent('esx:setJob')
@@ -42,8 +52,17 @@ CreateThread(function()
         Citizen.Wait(100)
     end
     PlayerData = ESX.GetPlayerData()
-
     loadBossZones()
+    if playerData and playerData.job then
+        SendNUIMessage({
+            action = 'initData',
+            playerData = {
+                job = playerData.job.name,
+                grade = playerData.job.grade,
+                grade_name = playerData.job.grade_name
+            }
+        })
+    end
 end)
 
 local function debugJobData(job)

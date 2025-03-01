@@ -97,11 +97,37 @@ const App: React.FC = () => {
         }
         
         if (data.playerData) {
-          console.log('[DEBUG] Received playerData:', data.playerData);
+          console.log('[DEBUG] Received playerData from setVisible:', data.playerData);
           window.PlayerData = data.playerData;
           
           const refreshEvent = new CustomEvent('jobDataUpdated', { 
-            detail: { job: data.playerData.job?.name } 
+            detail: { job: data.playerData.job?.name || data.playerData.job } 
+          });
+          window.dispatchEvent(refreshEvent);
+        }
+      }
+      else if (data.action === 'initData') {
+        console.log('[DEBUG] Received initData action with data:', JSON.stringify(data));
+        
+        if (data.playerData) {
+          console.log('[DEBUG] Processing initData playerData:', JSON.stringify(data.playerData));
+          
+          window.PlayerData = data.playerData;
+          
+          if (data.playerData.job) {
+            const jobName = typeof data.playerData.job === 'string' 
+              ? data.playerData.job 
+              : data.playerData.job.name || '';
+              
+            window.latestJobData = jobName;
+            console.log('[DEBUG] Set latestJobData from initData:', jobName);
+          }
+          
+          console.log('[DEBUG] Dispatching jobDataUpdated event with job:', 
+            data.playerData.job?.name || data.playerData.job);
+            
+          const refreshEvent = new CustomEvent('jobDataUpdated', { 
+            detail: { job: data.playerData.job?.name || data.playerData.job }
           });
           window.dispatchEvent(refreshEvent);
         }

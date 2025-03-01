@@ -54,6 +54,7 @@ const EmployeesTab: React.FC = () => {
   const [uniqueRoles, setUniqueRoles] = useState<string[]>([]);
   
   const pendingNoteRequests = useRef<string[]>([]);
+  const retryCountRef = useRef<number>(0);
 
   const { showNotification } = useNotification();
   const { showDialog } = useDialog();
@@ -89,96 +90,101 @@ const EmployeesTab: React.FC = () => {
     }
   };
 
-  
-  useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 5;
-    
-    const fetchEmployees = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const job = getFallbackJob();
-        console.log('[DEBUG] fetchEmployees - job name:', job);
-        
-        if (!job) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`[DEBUG] No job found, retrying in 500ms (${retryCount}/${maxRetries})`);
-            setTimeout(fetchEmployees, 500);
-            return;
-          }
-          
-          console.error('[DEBUG] Max retries reached, cannot fetch employees');
-          setError('Nelze načíst zaměstnance: Chybí název frakce');
-          setLoading(false);
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const job = getFallbackJob();
+      console.log('[DEBUG] fetchEmployees - job name:', job);
+      
+      if (!job) {
+        const maxRetries = 5;
+        if (retryCountRef.current < maxRetries) {
+          retryCountRef.current++;
+          console.log(`[DEBUG] No job found, retrying in 500ms (${retryCountRef.current}/${maxRetries})`);
+          setTimeout(fetchEmployees, 500);
           return;
         }
         
-        const requestData = { 
-          job: job,
-          job_name: job
-        };
-        
-        console.log('[DEBUG] Sending employee request with data:', JSON.stringify(requestData));
-        
-        const data = await fetchWithFallback<RawEmployee[]>(
-          'getEmployees', 
-          requestData, 
-          true 
-        );
-        console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
-       
-        if (!data || data.length === 0) {
-          setError('Žádní zaměstnanci nenalezeni');
-          return;
-        }
-        
-        const playtimeData = await fetchWithFallback<{[key: string]: number}>(
-          'hcyk_bossactions:getEmployeesPlaytime',
-          { job },
-          true
-        );
-        
-        console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
-        
-        const formattedEmployees = data.map(emp => {
-          console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
-          const convertedEmp = convertEmployeeData(emp);
-          const identifier = safelyExtractEmployeeId(emp);
-          console.log('[DEBUG] Extracted identifier:', identifier);
-          const weeklyPlaytime = playtimeData && identifier && playtimeData[String(identifier)] 
-            ? playtimeData[String(identifier)] 
-            : 0;
-          
-          return {
-            ...convertedEmp,
-            weeklyPlaytime
-          };
-        });
-        
-        console.log('[DEBUG] Formatted employees:', JSON.stringify(formattedEmployees));
-        setEmployees(formattedEmployees);
-      } catch (err) {
-        console.error('[DEBUG] Error fetching employees:', err);
-        setError('Chyba při načítání zaměstnanců');
-      } finally {
+        console.error('[DEBUG] Max retries reached, cannot fetch employees');
+        setError('Nelze načíst zaměstnance: Chybí název frakce');
         setLoading(false);
+        return;
       }
-    };
-  
-    fetchEmployees();
-  }, []); 
+      
+      retryCountRef.current = 0;
+      
+      const requestData = { 
+        job: job,
+        job_name: job
+      };
+      
+      console.log('[DEBUG] Sending employee request with data:', JSON.stringify(requestData));
+      
+      const data = await fetchWithFallback<RawEmployee[]>(
+        'getEmployees', 
+        requestData, 
+        true 
+      );
+      console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
+     
+      if (!data || data.length === 0) {
+        setError('Žádní zaměstnanci nenalezeni');
+        return;
+      }
+      
+      const playtimeData = await fetchWithFallback<{[key: string]: number}>(
+        'hcyk_bossactions:getEmployeesPlaytime',
+        { job },
+        true
+      );
+      
+      console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
+      
+      const formattedEmployees = data.map(emp => {
+        console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
+        const convertedEmp = convertEmployeeData(emp);
+        const identifier = safelyExtractEmployeeId(emp);
+        console.log('[DEBUG] Extracted identifier:', identifier);
+        const weeklyPlaytime = playtimeData && identifier && playtimeData[String(identifier)] 
+          ? playtimeData[String(identifier)] 
+          : 0;
+        
+        return {
+          ...convertedEmp,
+          weeklyPlaytime
+        };
+      });
+      
+      console.log('[DEBUG] Formatted employees:', JSON.stringify(formattedEmployees));
+      setEmployees(formattedEmployees);
+    } catch (err) {
+      console.error('[DEBUG] Error fetching employees:', err);
+      setError('Chyba při načítání zaměstnanců');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleJobUpdate = (event: CustomEvent) => {
+      console.log('[DEBUG] jobDataUpdated event received with detail:', 
+        event.detail ? JSON.stringify(event.detail) : 'no detail');
+        
       if (event.detail?.job) {
+        console.log('[DEBUG] Triggering employee fetch with job:', event.detail.job);
         fetchEmployees();
       }
     };
     
     window.addEventListener('jobDataUpdated', handleJobUpdate as EventListener);
+    
+    const existingJob = getFallbackJob();
+    if (existingJob) {
+      console.log('[DEBUG] Found existing job data on component mount:', existingJob);
+      fetchEmployees();
+    }
     
     return () => {
       window.removeEventListener('jobDataUpdated', handleJobUpdate as EventListener);
