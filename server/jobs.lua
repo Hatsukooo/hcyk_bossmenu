@@ -428,13 +428,17 @@ end)
 lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
     local xPlayer = ESX.GetPlayerFromId(source)
     
+    if type(job) == "table" then
+    end
+    
     if type(job) == "table" and job.job then
         job = job.job
     elseif type(job) == "table" and job.name then
         job = job.name
     end
-    
+        
     identifier = validateIdentifier(identifier)
+    
     if not identifier then
         return {success = false, message = "Neplatný identifikátor zaměstnance"}
     end
@@ -443,20 +447,22 @@ lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job,
         return {success = false, message = "Nemáš oprávnění"}
     end
     
-    local success = pcall(function()
+    local success, result = pcall(function()
         local rowsAffected = MySQL.Sync.execute(
-            "UPDATE employee_notes SET note = ? WHERE employee_identifier = ? AND job_name = ?", 
+            "UPDATE employee_notes SET note = ? WHERE employee_identifier = ? AND job_name = ?",
             {note, identifier, job}
         )
-        
+    
         if rowsAffected == 0 then
             MySQL.Sync.execute(
-                "INSERT INTO employee_notes (employee_identifier, job_name, note) VALUES (?, ?, ?)", 
+                "INSERT INTO employee_notes (employee_identifier, job_name, note) VALUES (?, ?, ?)",
                 {identifier, job, note}
             )
         end
+        
+        return rowsAffected
     end)
-    
+        
     if success then
         return {success = true, message = "Poznámka byla úspěšně uložena"}
     else
