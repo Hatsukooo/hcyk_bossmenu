@@ -201,20 +201,22 @@ local function validateIdentifier(identifier)
     return identifier
 end
 
+local function removeJobFromMultiJob(identifier, jobName)
+    if not identifier or not jobName then return false end
+    
+    MySQL.Async.execute('DELETE FROM user_jobs WHERE identifier = ? AND job = ?', 
+        {identifier, jobName},
+        function(rowsChanged)
+            if rowsChanged > 0 then
+                print("^2[INFO]^7 Removed job " .. jobName .. " from multijob for " .. identifier)
+            end
+        end
+    )
+    return true
+end
+
 lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, identifier)
     local xPlayer = ESX.GetPlayerFromId(source)
-    
-    if type(job) == "table" and job.job then
-        job = job.job
-    end
-    
-    identifier = validateIdentifier(identifier)
-    if not identifier then
-        return {success = false, message = "Neplatný identifikátor zaměstnance"}
-    end
-    
-    print("[HCYK_BOSSACTIONS] Fire request: ", source, job, identifier)
-    print("[HCYK_BOSSACTIONS] Player job data: ", xPlayer.getJob().name, xPlayer.getJob().grade_name)
     
     if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
         return {success = false, message = "Nemáš oprávnění"}
@@ -226,6 +228,8 @@ lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, ide
         
         TriggerClientEvent('esx:showNotification', targetPlayer.source, 'Byl jsi propuštěn z práce ' .. job)
         
+        removeJobFromMultiJob(identifier, job)
+        
         return {success = true, message = "Hráč byl úspěšně propuštěn"}
     else
         local result = MySQL.Sync.execute('UPDATE users SET job = ?, job_grade = ? WHERE identifier = ? AND job = ?', {
@@ -233,6 +237,8 @@ lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, ide
         })
         
         if result and result > 0 then
+            removeJobFromMultiJob(identifier, job)
+            
             return {success = true, message = "Hráč byl úspěšně propuštěn"}
         else
             local playerExists = MySQL.Sync.fetchScalar('SELECT COUNT(*) FROM users WHERE identifier = ?', {identifier})
@@ -409,7 +415,8 @@ lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, 
         return {success = false, message = "Nemáš oprávnění"}
     end
     
-    local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ? AND job_name = ?", {identifier, job})
+    local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ? AND job_name = ?", 
+        {identifier, job})
 
     if result and #result > 0 then
         return {success = true, note = result[1].note}

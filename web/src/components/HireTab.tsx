@@ -20,6 +20,7 @@ const HireTab: React.FC = () => {
   const [nearbyPlayers, setNearbyPlayers] = useState<NearbyPlayer[]>([]);
   const [jobGrades, setJobGrades] = useState<JobGrade[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [playerNotes, setPlayerNotes] = useState<{[key: string]: string}>({});
   const [loadingGrades, setLoadingGrades] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
@@ -28,31 +29,58 @@ const HireTab: React.FC = () => {
   const [isHiring, setIsHiring] = useState<boolean>(false); // Add missing state
   const { showNotification } = useNotification();
 
-  // Fetch nearby players when component mounts
+  const fetchPlayerNotes = async (players: NearbyPlayer[]) => {
+    const job = getFallbackJob();
+    
+    for (const player of players) {
+      try {
+        const noteResponse = await fetchWithFallback<{success: boolean; note: string}>(
+          'getEmployeeNote',
+          {
+            job: job,
+            identifier: player.id
+          },
+          false
+        );
+        
+        if (noteResponse.success && noteResponse.note) {
+          setPlayerNotes(prev => ({
+            ...prev,
+            [player.id]: noteResponse.note
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching note for player:', player.id, err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const job = getFallbackJob();
         
-        // Fetch nearby players using fetchWithFallback
         const playersData = await fetchWithFallback<NearbyPlayer[]>(
           'getNearbyPlayers', 
           { job },
-          true // Use mock data if fetch fails
+          true
         );
+        
+        if (Array.isArray(playersData)) {
+          setNearbyPlayers(playersData);
+          fetchPlayerNotes(playersData);
+        }
         
         setNearbyPlayers(Array.isArray(playersData) ? playersData : []);
         
-        // Fetch job grades (ranks)
         setLoadingGrades(true);
         const ranks = await fetchWithFallback<JobGrade[]>(
           'getRanks', 
           { job },
-          true // Use mock data if fetch fails
+          true 
         );
         
-        // Sort ranks by grade
         const sortedRanks = Array.isArray(ranks) 
           ? ranks.sort((a, b) => a.grade - b.grade)
           : [];
@@ -69,7 +97,7 @@ const HireTab: React.FC = () => {
 
     fetchData();
   }, []);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -152,7 +180,7 @@ const HireTab: React.FC = () => {
         <form onSubmit={handleSubmit} className="hire-form">
           <div className="form-group">
             <label htmlFor="player">Vyberte hráče:</label>
-            <select 
+            <select
               id="player"
               value={selectedPlayer}
               onChange={(e) => setSelectedPlayer(e.target.value)}
@@ -169,9 +197,17 @@ const HireTab: React.FC = () => {
             </select>
           </div>
           
+          {/* Display notes if they exist for the selected player */}
+          {selectedPlayer && playerNotes[selectedPlayer] && (
+            <div className="player-note">
+              <h4>Předchozí poznámka k tomuto hráči:</h4>
+              <div className="note-content">{playerNotes[selectedPlayer]}</div>
+            </div>
+          )}
+          
           <div className="form-group">
             <label htmlFor="position">Vyberte pozici:</label>
-            <select 
+            <select
               id="position"
               value={selectedPosition}
               onChange={(e) => setSelectedPosition(e.target.value)}
@@ -199,7 +235,7 @@ const HireTab: React.FC = () => {
           
           <div className="form-group">
             <label htmlFor="additional">Dodatečné informace:</label>
-            <textarea 
+            <textarea
               id="additional"
               value={additionalInfo}
               onChange={(e) => setAdditionalInfo(e.target.value)}
@@ -208,15 +244,15 @@ const HireTab: React.FC = () => {
           </div>
           
           <div className="form-actions">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="action-btn"
               disabled={!selectedPlayer || !selectedPosition || isHiring}
             >
               {isHiring ? "Zpracovávám..." : "Zaměstnat"}
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="cancel-btn"
               onClick={() => {
                 setSelectedPlayer("");
