@@ -6,22 +6,42 @@
 }
 
 .finance-card {
-  background-color: #343742;
+  background: linear-gradient(145deg, rgba(14, 15, 24, 0.9) 0%, rgba(16, 18, 33, 0.9) 100%);
   border-radius: 8px;
   padding: 25px;
   text-align: center;
+  border: 1px solid rgba(27, 28, 46, 0.5);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.finance-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(145deg, rgba(27, 28, 46, 0.3), rgba(21, 23, 43, 0.3));
+  border-radius: 10px;
+  z-index: -1;
+  filter: blur(8px);
+  pointer-events: none;
 }
 
 .finance-card h3 {
   font-size: 20px;
   margin-bottom: 15px;
-  color: #d6d6d6;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 .balance {
   font-size: 36px;
   font-weight: 700;
-  color: #d6d6d6;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 .finance-stats {
@@ -31,10 +51,28 @@
 }
 
 .stat-item {
-  background-color: #343742;
+  background: linear-gradient(145deg, rgba(14, 15, 24, 0.9) 0%, rgba(16, 18, 33, 0.9) 100%);
   border-radius: 8px;
   padding: 20px;
   flex: 1;
+  border: 1px solid rgba(27, 28, 46, 0.5);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-item::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(145deg, rgba(27, 28, 46, 0.3), rgba(21, 23, 43, 0.3));
+  border-radius: 10px;
+  z-index: -1;
+  filter: blur(8px);
+  pointer-events: none;
 }
 
 .stat-item h4 {
@@ -50,14 +88,17 @@
 
 .income {
   color: #4cd964;
+  text-shadow: 0 0 10px rgba(76, 217, 100, 0.3);
 }
 
 .expenses {
   color: #ff3b30;
+  text-shadow: 0 0 10px rgba(255, 59, 48, 0.3);
 }
 
 .net {
-  color: #4a90e2;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 /* Filtr pro časový rozsah */
@@ -69,12 +110,17 @@
 
 .time-filter button {
   padding: 8px 15px;
+  background: linear-gradient(145deg, #020610b6, #1a1a2e);
+  color: white;
+  border: 1px solid rgba(27, 28, 46, 0.8);
 }
 
 .active-filter {
-  background-color: #4a90e2;
+  background: linear-gradient(145deg, #1a1a2e, #020610b6) !important;
   color: white;
-  border: 1px solid #4a90e2;
+  border: 1px solid rgba(27, 28, 46, 0.8);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), 0 0 4px rgba(27, 28, 46, 0.8);
+  transform: scale(1.05);
 }
 
 /* New finance header with inline filter buttons */

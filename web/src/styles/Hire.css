@@ -1,91 +1,128 @@
 .hire-form-container {
-    background-color: #343742;
-    border-radius: 8px;
-    padding: 25px;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-  
-  .hire-form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-    gap: 8px;
-  }
-  
-  .form-group label {
-    font-size: 16px;
-    color: #d6d6d6;
-  }
-  
-  .form-group select,
-  .form-group input,
-  .form-group textarea {
-    font-family: 'Oswald', sans-serif;
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #4a5568;
-    background-color: #2d3748;
-    color: #fff;
-    font-size: 16px;
-  }
-  
-  .form-group textarea {
-    min-height: 100px;
-    resize: vertical;
-  }
-  
-  .salary-preview {
-    background-color: #2d3748;
-    padding: 15px;
-    border-radius: 4px;
-    text-align: center;
-  }
-  
-  .salary-amount {
-    font-size: 22px;
-    font-weight: 600;
-    color: #4cd964;
-  }
-  
-  .form-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 15px;
-  }
-  
-  .form-actions button {
-    flex: 1;
-    margin: 0 10px;
-  }
-  
-  .position-requirements {
-    background-color: #2d3748;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-  }
-  
-  .position-requirements h4 {
-    font-size: 16px;
-    margin-bottom: 8px;
-    color: #d6d6d6;
-  }
-  
-  .position-requirements p {
-    color: #a0a0a0;
-    font-size: 14px;
-  }
+  background: linear-gradient(145deg, rgba(14, 15, 24, 0.9) 0%, rgba(16, 18, 33, 0.9) 100%);
+  border-radius: 8px;
+  padding: 25px;
+  max-width: 600px;
+  margin: 0 auto;
+  border: 1px solid rgba(27, 28, 46, 0.5);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.hire-form-container::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(145deg, rgba(27, 28, 46, 0.3), rgba(21, 23, 43, 0.3));
+  border-radius: 10px;
+  z-index: -1;
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.hire-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.form-group select,
+.form-group input,
+.form-group textarea {
+  font-family: 'Oswald', sans-serif;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(27, 28, 46, 0.8);
+  background: rgba(14, 15, 24, 0.7);
+  color: #fff;
+  font-size: 16px;
+}
+
+.form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 10px) center;
+  padding-right: 30px;
+}
+
+.form-group select:focus,
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: rgba(27, 28, 46, 1);
+  box-shadow: 0 0 5px rgba(27, 28, 46, 0.8);
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.salary-preview {
+  background: rgba(14, 15, 24, 0.7);
+  padding: 15px;
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid rgba(27, 28, 46, 0.5);
+}
+
+.salary-amount {
+  font-size: 22px;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.form-actions button {
+  flex: 1;
+  margin: 0 10px;
+}
+
+.position-requirements {
+  background: rgba(14, 15, 24, 0.7);
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(27, 28, 46, 0.5);
+}
+
+.position-requirements h4 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.position-requirements p {
+  color: #a0a0a0;
+  font-size: 14px;
+}
 
 .player-note {
-  background-color: rgba(74, 144, 226, 0.1);
-  border-left: 3px solid #4a90e2;
+  background: rgba(27, 28, 46, 0.3);
+  border-left: 3px solid #ffffff;
   padding: 12px;
   margin: 10px 0 15px;
   border-radius: 4px;
@@ -99,7 +136,7 @@
 }
 
 .note-content {
-  color: #d6d6d6;
+  color: #ffffff;
   font-size: 14px;
   white-space: pre-wrap;
   line-height: 1.4;
