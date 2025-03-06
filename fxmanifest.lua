@@ -33,3 +33,9 @@ files {
 }
 
 ui_page 'web/build/index.html'
+
+dependencies {
+    'hcyk_markers',
+    'PolyZone',
+    'hcyk_poly',
+}
