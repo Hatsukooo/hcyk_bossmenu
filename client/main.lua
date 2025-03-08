@@ -420,3 +420,18 @@ RegisterNetEvent('hcyk_bossmenu:resetState')
 AddEventHandler('hcyk_bossmenu:resetState', function()
     ResetMenuState()
 end)
+
+RegisterNUICallback('getJobSettings', function(data, cb)
+    debugPrint('Fetching job settings for job', data.job)
+    data = normalizeJobParameter(data)
+    
+    lib.callback('hcyk_bossactions:getJobSettings', false, function(result)
+        if result then
+            debugPrint('Received job settings', json.encode(result))
+            cb(result)
+        else
+            debugPrint('No job settings received')
+            cb({success = false, message = "Failed to fetch settings"})
+        end
+    end, data.job)
+end)
