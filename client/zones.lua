@@ -28,11 +28,6 @@ function createZone(name, job, point, model)
         maxZ = point.z + 3.0,
     })
 
-    -- local object = CreateObject(GetHashKey(model), point.x, point.y, point.z, false, false, false)
-    SetEntityHeading(object, 0.0)
-    FreezeEntityPosition(object, true)
-    SetEntityAsMissionEntity(object, true, true)
-
     TriggerEvent('poly:createCircleZone', name, point.xyz, 2.0, {
         id = 'bosszone_' .. name,
         minZ = point.z - 1.0,
@@ -60,10 +55,6 @@ end
 
 function deleteZone(name)
     if createdZones[name] then
-        if DoesEntityExist(createdZones[name].object) then
-            -- DeleteObject(createdZones[name].object)
-        end
-
         createdZones[name].poly:destroy()
         createdZones[name] = nil
     end

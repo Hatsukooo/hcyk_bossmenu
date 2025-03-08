@@ -29,7 +29,7 @@ function OpenBossMenu(job)
     end
     
     -- is in allowed grades
-    if not lib.contains(Config.AllowedGrades, playerJob.grade_name) then
+    if not lib.table.contains(Config.AllowedGrades, playerJob.grade_name) then
         debugPrint("Grade check failed! Player's grade_name:", playerJob.grade_name)
         lib.notify({
             title = 'Boss Menu',
