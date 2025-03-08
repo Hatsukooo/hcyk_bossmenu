@@ -2,7 +2,6 @@ Config = {}
 
 Config.ResourceName = GetCurrentResourceName()
 Config.Debug = true 
-Config.AdminGroups = {'owner', 'admin'}
 
 Config.MenuCooldown = 1000
 Config.MaxTransaction = 100000
@@ -26,4 +25,10 @@ Config.Locations = {
         location = vec3(-74.4848, -819.0671, 326.1752),
         model = 'edynu_marker5'
     }
+}
+
+Config.AllowedGrades = {
+    'boss',
+    'chief_of_police',
+    -- 'ADD YOUR OWN GRADE HERE',
 }

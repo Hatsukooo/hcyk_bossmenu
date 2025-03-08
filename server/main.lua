@@ -6,7 +6,7 @@ end
 
 local function checkBossPermissions(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
-    return xPlayer and xPlayer.getJob().name == job and xPlayer.getJob().grade_name == 'boss'
+    return xPlayer and xPlayer.getJob().name == job and table.find(Config.AllowedGrades, xPlayer.getJob().grade_name)
 end
 
 local function debugLog(...)
