@@ -126,9 +126,11 @@ local function handleAsyncCallback(cb, success, message)
     })
 end
 
+
 lib.callback.register('hcyk_bossactions:hireEmployee', function(source, job, player, grade)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -218,7 +220,7 @@ end
 lib.callback.register('hcyk_bossactions:fireEmployee', function(source, job, identifier)
     local xPlayer = ESX.GetPlayerFromId(source)
     
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -254,7 +256,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:setGrade', function(source, job, identifier, grade)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -299,7 +301,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:setSalary', function(source, job, grade, salary)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -316,7 +318,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:getRanks', function(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {}
     end
     
@@ -326,7 +328,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:createRank', function(source, job, data)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -347,7 +349,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:updateRank', function(source, job, grade, data)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -365,7 +367,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:deleteRank', function(source, job, grade)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
     
@@ -388,7 +390,7 @@ end)
 
 lib.callback.register('hcyk_bossactions:getJobData', function(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return nil
     end
     
@@ -398,27 +400,17 @@ lib.callback.register('hcyk_bossactions:getJobData', function(source, job)
 end)
 
 lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    
-    if type(job) == "table" and job.job then
-        job = job.job
-    elseif type(job) == "table" and job.name then
-        job = job.name
-    end
-    
-    identifier = validateIdentifier(identifier)
-    if not identifier then
-        return {success = false, message = "Neplatný identifikátor zaměstnance"}
-    end
-    
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    local xPlayer, jobName = normalizeCallbackParams(source, job)
+   
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
-    
-    local result = MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ? AND job_name = ?", 
-        {identifier, job})
-
-    if result and #result > 0 then
+   
+    local success, result = pcall(function()
+        return MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ? AND job_name = ?", {identifier, job})
+    end)
+   
+    if success and result and #result > 0 then
         return {success = true, note = result[1].note}
     else
         return {success = true, note = ""}
@@ -426,43 +418,20 @@ lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, 
 end)
 
 lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    
-    if type(job) == "table" then
-    end
-    
-    if type(job) == "table" and job.job then
-        job = job.job
-    elseif type(job) == "table" and job.name then
-        job = job.name
-    end
-        
-    identifier = validateIdentifier(identifier)
-    
-    if not identifier then
-        return {success = false, message = "Neplatný identifikátor zaměstnance"}
-    end
-    
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    local xPlayer, jobName = normalizeCallbackParams(source, job)
+     
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {success = false, message = "Nemáš oprávnění"}
     end
-    
-    local success, result = pcall(function()
-        local rowsAffected = MySQL.Sync.execute(
-            "UPDATE employee_notes SET note = ? WHERE employee_identifier = ? AND job_name = ?",
-            {note, identifier, job}
+ 
+    local success = pcall(function()
+        MySQL.Sync.execute(
+            "INSERT INTO employee_notes (employee_identifier, note, job_name) VALUES (?, ?, ?) " ..
+            "ON DUPLICATE KEY UPDATE note = ?",
+            {identifier, note, job, note}
         )
-    
-        if rowsAffected == 0 then
-            MySQL.Sync.execute(
-                "INSERT INTO employee_notes (employee_identifier, job_name, note) VALUES (?, ?, ?)",
-                {identifier, job, note}
-            )
-        end
-        
-        return rowsAffected
     end)
-        
+ 
     if success then
         return {success = true, message = "Poznámka byla úspěšně uložena"}
     else
@@ -473,7 +442,7 @@ end)
 lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, job)
     local xPlayer = ESX.GetPlayerFromId(source)
     
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
         return {}
     end
     
@@ -510,17 +479,21 @@ end)
 
 lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job, data)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or xPlayer.getJob().grade_name ~= 'boss' then
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
+        print("Authorization failed for:", source, job)
         return {success = false, message = "Nemáš oprávnění"}
     end
-    
+   
     print("Updating job settings for", job, "with data:", json.encode(data))
-    
+   
+    -- Handle job label update
     if data.label and data.label ~= '' then
         local success = false
-        local querySuccess = pcall(function()
+        local querySuccess, error = pcall(function()
             success = MySQL.Sync.execute('UPDATE `jobs` SET label = ? WHERE name = ?', {data.label, job})
         end)
+       
+        print("Job label update result:", querySuccess, success, error)
         
         if querySuccess and success then
             local players = ESX.GetPlayers()
@@ -530,34 +503,103 @@ lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job
                     targetPlayer.setJob(job, targetPlayer.getJob().grade)
                 end
             end
-            
-            return {success = true, message = "Název frakce byl úspěšně změněn"}
+           
+            if not data.settings then  -- Only return if we're not also updating settings
+                return {success = true, message = "Název frakce byl úspěšně změněn"}
+            end
         else
             return {success = false, message = "Nepodařilo se změnit název frakce"}
         end
     end
-    
+   
+    -- Handle settings update
     if data.settings then
         local settings = data.settings
+        print("Updating settings:", json.encode(settings))
         
+        -- First, check if the table exists
         local tableExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'jobs_settings'")
+        print("Table exists check:", tableExists)
         
-        if tableExists > 0 then
-            local existingSettings = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM jobs_settings WHERE job_name = ?", {job})
-            
-            if existingSettings > 0 then
+        -- Create table if it doesn't exist
+        if tableExists == 0 then
+            print("Table doesn't exist, creating it now")
+            local createSuccess, createError = pcall(function()
+                MySQL.Sync.execute([[
+                    CREATE TABLE IF NOT EXISTS `jobs_settings` (
+                      `id` int(11) NOT NULL AUTO_INCREMENT,
+                      `job_name` varchar(50) NOT NULL,
+                      `description` text DEFAULT NULL,
+                      `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                      PRIMARY KEY (`id`),
+                      UNIQUE KEY `job_name` (`job_name`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+                ]])
+            end)
+            print("Table creation result:", createSuccess, createError)
+        end
+        
+        -- Now check if an entry exists for this job
+        local existingSettings, queryError = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM jobs_settings WHERE job_name = ?", {job})
+        print("Existing settings check:", existingSettings, queryError)
+        
+        if existingSettings and existingSettings > 0 then
+            local updateSuccess, updateError = pcall(function() 
                 MySQL.Sync.execute(
-                    "UPDATE jobs_settings SET description = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE job_name = ?", 
-                    {settings.description, settings.color, job}
+                    "UPDATE jobs_settings SET description = ?, updated_at = CURRENT_TIMESTAMP WHERE job_name = ?",
+                    {settings.description, job}
                 )
-            else
+            end)
+            print("Update settings result:", updateSuccess, updateError)
+        else
+            local insertSuccess, insertError = pcall(function()
                 MySQL.Sync.execute(
-                    "INSERT INTO jobs_settings (job_name, description, color) VALUES (?, ?, ?)", 
-                    {job, settings.description, settings.color}
+                    "INSERT INTO jobs_settings (job_name, description) VALUES (?, ?)",
+                    {job, settings.description}
                 )
-            end
+            end)
+            print("Insert settings result:", insertSuccess, insertError)
         end
     end
-    
+   
     return {success = true, message = "Nastavení frakce bylo úspěšně uloženo"}
+end)
+
+lib.callback.register('hcyk_bossactions:getJobSettings', function(source, job)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    print("Fetching job settings for", job)
+    
+    local tableExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'jobs_settings'")
+    if tableExists == 0 then
+        print("jobs_settings table doesn't exist yet")
+        return {success = true, settings = {description = ""}}
+    end
+    
+    local jobLabel = MySQL.Sync.fetchScalar("SELECT label FROM jobs WHERE name = ?", {job})
+    
+    local jobSettings = MySQL.Sync.fetchAll("SELECT * FROM jobs_settings WHERE job_name = ?", {job})
+    
+    if jobSettings and #jobSettings > 0 then
+        print("Found settings for job:", job)
+        return {
+            success = true, 
+            label = jobLabel,
+            settings = {
+                description = jobSettings[1].description or "",
+            }
+        }
+    else
+        print("No settings found for job:", job)
+        return {
+            success = true, 
+            label = jobLabel,
+            settings = {
+                description = "",
+            }
+        }
+    end
 end)

@@ -174,7 +174,7 @@ CreateThread(function()
     end
 end)
 
-local function normalizeCallbackParams(source, job, ...)
+function normalizeCallbackParams(source, job, ...)
     local xPlayer = ESX.GetPlayerFromId(source)
     local jobName = job
     
@@ -227,44 +227,4 @@ lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, 
     end
     
     return result
-end)
-
-lib.callback.register('hcyk_bossactions:getEmployeeNote', function(source, job, identifier)
-    local xPlayer, jobName = normalizeCallbackParams(source, job)
-    
-    if not xPlayer or xPlayer.getJob().name ~= jobName or xPlayer.getJob().grade_name ~= 'boss' then
-        return {success = false, message = "Nemáš oprávnění"}
-    end
-    
-    local success, result = pcall(function()
-        return MySQL.Sync.fetchAll("SELECT note FROM employee_notes WHERE employee_identifier = ?", {identifier})
-    end)
-    
-    if success and result and #result > 0 then
-        return {success = true, note = result[1].note}
-    else
-        return {success = true, note = ""}
-    end
-end)
-
-lib.callback.register('hcyk_bossactions:saveEmployeeNote', function(source, job, identifier, note)
-    local xPlayer, jobName = normalizeCallbackParams(source, job)
-    
-    if not xPlayer or xPlayer.getJob().name ~= jobName or xPlayer.getJob().grade_name ~= 'boss' then
-        return {success = false, message = "Nemáš oprávnění"}
-    end
-    
-    local success = pcall(function()
-        MySQL.Sync.execute(
-            "INSERT INTO employee_notes (employee_identifier, note) VALUES (?, ?) " ..
-            "ON DUPLICATE KEY UPDATE note = ?", 
-            {identifier, note, note}
-        )
-    end)
-    
-    if success then
-        return {success = true, message = "Poznámka byla úspěšně uložena"}
-    else
-        return {success = false, message = "Nepodařilo se uložit poznámku"}
-    end
 end)

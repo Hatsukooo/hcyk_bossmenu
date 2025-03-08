@@ -7,8 +7,6 @@ import '../styles/FactionManagement.css';
 
 // Define additional interfaces for faction settings
 interface FactionSettings {
-  logo?: string;
-  color: string;
   description: string;
 }
 
@@ -31,26 +29,40 @@ const FactionManagementTab: React.FC = () => {
     salary: 0
   });
   const [factionSettings, setFactionSettings] = useState<FactionSettings>({
-    color: '#4a90e2',
     description: ''
   });
   const [initialJobLabel, setInitialJobLabel] = useState('');
   const [jobFormChanged, setJobFormChanged] = useState(false);
 
-  // Fetch job data and ranks
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-
         const job = getFallbackJob();
         
-        // Fetch job data
+        const jobSettingsResponse = await fetchWithFallback<{
+          success: boolean;
+          label?: string;
+          settings?: {
+            description: string;
+            color?: string;
+          }
+        }>(
+          'getJobSettings',
+          { job },
+          true
+        );
+        
+        let description = "";
+        if (jobSettingsResponse && jobSettingsResponse.success && jobSettingsResponse.settings) {
+          description = jobSettingsResponse.settings.description || "";
+        }
+        
         const jobDataResponse = await fetchWithFallback<JobData>(
-          'getJobData', 
-          { job }, 
-          true // Use mock data if fetch fails
+          'getJobData',
+          { job },
+          true
         );
         
         if (!jobDataResponse) {
@@ -61,17 +73,14 @@ const FactionManagementTab: React.FC = () => {
         setJobData(jobDataResponse);
         setInitialJobLabel(jobDataResponse.label || '');
         
-        // Set faction settings with defaults or stored values
         setFactionSettings({
-          color: jobDataResponse.color || '#4a90e2',
-          description: jobDataResponse.description || ''
+          description: description
         });
         
-        // Fetch ranks data
         const ranksData = await fetchWithFallback<JobGrade[]>(
-          'getRanks', 
-          { job }, 
-          true // Use mock data if fetch fails
+          'getRanks',
+          { job },
+          true
         );
         
         if (!ranksData || ranksData.length === 0) {
@@ -86,11 +95,10 @@ const FactionManagementTab: React.FC = () => {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, []);
 
-  // Event handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({
@@ -265,9 +273,6 @@ const FactionManagementTab: React.FC = () => {
             label: jobData.label,
             settings: {
               ...factionSettings,
-              // Include empty values for removed fields to maintain API compatibility
-              maxMembers: 50,
-              hideFromPublic: false
             }
           }
         }
@@ -523,19 +528,5 @@ const FactionManagementTab: React.FC = () => {
     </div>
   );
 };
-
-// Helper function to determine text color based on background color
-function getContrastColor(hexColor: string): string {
-  // Convert hex to RGB
-  const r = parseInt(hexColor.slice(1, 3), 16);
-  const g = parseInt(hexColor.slice(3, 5), 16);
-  const b = parseInt(hexColor.slice(5, 7), 16);
-  
-  // Calculate luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
-  // Return black for light colors, white for dark colors
-  return luminance > 0.5 ? '#000000' : '#FFFFFF';
-}
 
 export default FactionManagementTab;

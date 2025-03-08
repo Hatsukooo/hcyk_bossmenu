@@ -50,10 +50,11 @@ CREATE TABLE IF NOT EXISTS `player_playtime` (
 CREATE TABLE IF NOT EXISTS `employee_notes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `employee_identifier` varchar(60) NOT NULL,
+  `job_name` varchar(50) NOT NULL,
   `note` text,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `employee_identifier` (`employee_identifier`)
+  UNIQUE KEY `employee_job` (`employee_identifier`, `job_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `job_revenues` (
