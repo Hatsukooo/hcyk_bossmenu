@@ -41,12 +41,14 @@ const FactionManagementTab: React.FC = () => {
         setError(null);
         const job = getFallbackJob();
         
+        console.log('[DEBUG] Fetching job settings for job:', job);
+        
+        // First get the job settings
         const jobSettingsResponse = await fetchWithFallback<{
           success: boolean;
           label?: string;
           settings?: {
             description: string;
-            color?: string;
           }
         }>(
           'getJobSettings',
@@ -54,11 +56,26 @@ const FactionManagementTab: React.FC = () => {
           true
         );
         
+        console.log('[DEBUG] Job settings response:', JSON.stringify(jobSettingsResponse));
+        
         let description = "";
-        if (jobSettingsResponse && jobSettingsResponse.success && jobSettingsResponse.settings) {
-          description = jobSettingsResponse.settings.description || "";
+        let jobLabel = "";
+        
+        if (jobSettingsResponse && jobSettingsResponse.success) {
+          if (jobSettingsResponse.settings && typeof jobSettingsResponse.settings.description === 'string') {
+            description = jobSettingsResponse.settings.description;
+          }
+          
+          if (jobSettingsResponse.label) {
+            jobLabel = jobSettingsResponse.label;
+          }
+          
+          console.log('[DEBUG] Retrieved settings - description:', description, 'label:', jobLabel);
+        } else {
+          console.log('[DEBUG] Job settings request was not successful or returned unexpected format');
         }
         
+        // Then get job data
         const jobDataResponse = await fetchWithFallback<JobData>(
           'getJobData',
           { job },
@@ -67,16 +84,21 @@ const FactionManagementTab: React.FC = () => {
         
         if (!jobDataResponse) {
           setError('Nepodařilo se načíst data frakce');
+          setLoading(false);
           return;
         }
         
+        console.log('[DEBUG] Job data response:', JSON.stringify(jobDataResponse));
+        
+        // Update state
         setJobData(jobDataResponse);
-        setInitialJobLabel(jobDataResponse.label || '');
+        setInitialJobLabel(jobDataResponse.label || jobLabel || '');
         
         setFactionSettings({
           description: description
         });
         
+        // Finally get ranks data
         const ranksData = await fetchWithFallback<JobGrade[]>(
           'getRanks',
           { job },
@@ -89,13 +111,13 @@ const FactionManagementTab: React.FC = () => {
           setRanks(ranksData);
         }
       } catch (err) {
-        console.error('Chyba při načítání dat frakce:', err);
+        console.error('[DEBUG] Chyba při načítání dat frakce:', err);
         setError('Chyba při načítání dat frakce');
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchData();
   }, []);
 
@@ -186,7 +208,7 @@ const FactionManagementTab: React.FC = () => {
         showNotification('error', response.message || 'Nepodařilo se upravit hodnost');
       }
     } catch (err) {
-      console.error('Chyba při úpravě hodnosti:', err);
+      console.error('[DEBUG] Chyba při úpravě hodnosti:', err);
       showNotification('error', 'Nastala chyba při úpravě hodnosti');
     }
   };
@@ -212,14 +234,14 @@ const FactionManagementTab: React.FC = () => {
           showNotification('success', 'Hodnost úspěšně vytvořena');
           setShowCreateModal(false);
         } catch (err) {
-          console.error('Chyba při načítání hodností po vytvoření:', err);
+          console.error('[DEBUG] Chyba při načítání hodností po vytvoření:', err);
           showNotification('warning', 'Hodnost vytvořena, ale nelze aktualizovat seznam');
         }
       } else {
         showNotification('error', response.message || 'Nepodařilo se vytvořit hodnost');
       }
     } catch (err) {
-      console.error('Chyba při vytváření hodnosti:', err);
+      console.error('[DEBUG] Chyba při vytváření hodnosti:', err);
       showNotification('error', 'Nastala chyba při vytváření hodnosti');
     }
   };
@@ -254,7 +276,7 @@ const FactionManagementTab: React.FC = () => {
             showNotification('error', response.message || 'Nepodařilo se smazat hodnost');
           }
         } catch (err) {
-          console.error('Chyba při mazání hodnosti:', err);
+          console.error('[DEBUG] Chyba při mazání hodnosti:', err);
           showNotification('error', 'Nastala chyba při mazání hodnosti');
         }
       }
@@ -265,43 +287,73 @@ const FactionManagementTab: React.FC = () => {
     if (!jobData) return;
     
     try {
+      console.log('[DEBUG] Saving faction settings:', {
+        label: jobData.label,
+        settings: factionSettings
+      });
+      
       const response = await fetchWithFallback<{success: boolean; message?: string}>(
         'updateJobSettings', 
         {
           job: getFallbackJob(),
           data: {
             label: jobData.label,
-            settings: {
-              ...factionSettings,
-            }
+            settings: factionSettings
           }
         }
       );
+      
+      console.log('[DEBUG] Update settings response:', JSON.stringify(response));
       
       if (response.success) {
         showNotification('success', 'Nastavení frakce bylo úspěšně uloženo');
         setJobFormChanged(false);
         
-        // Reload job data to refresh the UI with updated values
-        try {
-          const refreshedJobData = await fetchWithFallback<JobData>(
-            'getJobData', 
-            { job: getFallbackJob() }, 
-            true
-          );
-          
-          if (refreshedJobData) {
-            setJobData(refreshedJobData);
-            setInitialJobLabel(refreshedJobData.label || '');
+        // Refresh data after saving
+        setTimeout(async () => {
+          try {
+            const job = getFallbackJob();
+            
+            // Refresh job data
+            const refreshedJobData = await fetchWithFallback<JobData>(
+              'getJobData', 
+              { job }, 
+              true
+            );
+            
+            if (refreshedJobData) {
+              setJobData(refreshedJobData);
+              setInitialJobLabel(refreshedJobData.label || '');
+            }
+            
+            // Refresh job settings
+            const refreshedSettings = await fetchWithFallback<{
+              success: boolean;
+              settings?: {
+                description: string;
+              }
+            }>(
+              'getJobSettings',
+              { job },
+              true
+            );
+            
+            if (refreshedSettings && refreshedSettings.success && refreshedSettings.settings) {
+              setFactionSettings({
+                description: refreshedSettings.settings.description || ""
+              });
+            }
+            
+            console.log('[DEBUG] Data refreshed after save');
+          } catch (refreshError) {
+            console.error('[DEBUG] Chyba při aktualizaci dat frakce:', refreshError);
           }
-        } catch (refreshError) {
-          console.error('Chyba při aktualizaci dat frakce:', refreshError);
-        }
+        }, 500);
       } else {
         showNotification('error', response.message || 'Nepodařilo se uložit nastavení frakce');
       }
     } catch (err) {
-      console.error('Chyba při ukládání nastavení frakce:', err);
+      console.error('[DEBUG] Chyba při ukládání nastavení frakce:', err);
       showNotification('error', 'Nastala chyba při ukládání nastavení frakce');
     }
   };
@@ -357,8 +409,6 @@ const FactionManagementTab: React.FC = () => {
                   />
                   <span className="form-help">Popis činnosti a zaměření frakce</span>
                 </div>
-                
-
                 
                 {jobFormChanged && (
                   <div className="form-actions">
@@ -421,8 +471,6 @@ const FactionManagementTab: React.FC = () => {
               </div>
             </div>
           )}
-          
-
         </div>
       </div>
       

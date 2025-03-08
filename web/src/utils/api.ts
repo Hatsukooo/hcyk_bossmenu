@@ -10,6 +10,8 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
       ? (window as any).GetParentResourceName() 
       : "hcyk_bossmenu";
       
+    console.log(`[DEBUG] Fetching ${endpoint} with data:`, JSON.stringify(data));
+    
     const response = await fetch(`https://${resourceName}/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -17,19 +19,22 @@ export const fetchNUI = async <T = any>(endpoint: string, data: any): Promise<T>
     });
 
     const text = await response.text();
-    if (!text) {
-      console.warn(`Empty response from ${endpoint}`);
+    console.log(`[DEBUG] Response from ${endpoint}:`, text);
+    
+    if (!text || text.trim() === '') {
+      console.warn(`[DEBUG] Empty response from ${endpoint}`);
       return {} as T;
     }
 
     try {
       return JSON.parse(text) as T;
     } catch (jsonError) {
-      console.error(`Failed to parse JSON from ${endpoint}:`, text);
+      console.error(`[DEBUG] Failed to parse JSON from ${endpoint}:`, text);
+      console.error(`[DEBUG] JSON parse error:`, jsonError);
       throw new Error(`Invalid JSON response: ${jsonError}`);
     }
   } catch (error) {
-    console.error(`Error fetching from ${endpoint}:`, error);
+    console.error(`[DEBUG] Error fetching from ${endpoint}:`, error);
     throw error;
   }
 };
@@ -100,6 +105,14 @@ export const getMockData = (endpoint: string, data: any): any => {
           { id: 4, job_name: data.job, grade: 3, name: 'boss', label: 'Šéf', salary: 5000 }
         ]
       };
+    case 'getJobSettings':
+      return {
+        success: true,
+        label: data.job === 'police' ? 'Police Department' : (data.job === 'ambulance' ? 'Emergency Services' : 'Faction'),
+        settings: {
+          description: 'Mock description for ' + data.job
+        }
+      };
     case 'getEmployeesPlaytime':
       const mockPlaytimeData: {[key: string]: number} = {
         '1': 25,
@@ -108,7 +121,7 @@ export const getMockData = (endpoint: string, data: any): any => {
       };
       return mockPlaytimeData;
     default:
-      console.log(`No mock data defined for ${endpoint}, returning empty object`);
+      console.log(`[DEBUG] No mock data defined for ${endpoint}, returning empty object`);
       return {};
   }
 };
@@ -131,14 +144,58 @@ export const fetchWithFallback = async <T = any>(
     data.job = ensureJobString(data.job);
   }
   
+  // Add extra debug info for getJobSettings
+  if (endpoint.includes('getJobSettings')) {
+    console.log(`[DEBUG] Calling getJobSettings with job:`, data.job);
+  }
+  
   try {
+    // Try without prefix first
     const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
-    return await fetchNUI<T>(cleanEndpoint, data);
+    
+    try {
+      console.log(`[DEBUG] Trying endpoint without prefix: ${cleanEndpoint}`);
+      const result = await fetchNUI<T>(cleanEndpoint, data);
+      
+      // Check if result is valid and not empty
+      if (result && typeof result === 'object' && Object.keys(result as object).length > 0) {
+        console.log(`[DEBUG] Success! Data from ${cleanEndpoint}:`, result);
+        return result;
+      }
+    } catch (firstError) {
+      console.warn(`[DEBUG] Error in first fetch attempt:`, firstError);
+    }
+    
+    // If that fails, try with prefix
+    if (!endpoint.includes(':')) {
+      const prefixedEndpoint = `hcyk_bossactions:${endpoint}`;
+      
+      try {
+        console.log(`[DEBUG] Trying endpoint with prefix: ${prefixedEndpoint}`);
+        const result = await fetchNUI<T>(prefixedEndpoint, data);
+        
+        // Check if result is valid and not empty
+        if (result && typeof result === 'object' && Object.keys(result as object).length > 0) {
+          console.log(`[DEBUG] Success! Data from ${prefixedEndpoint}:`, result);
+          return result;
+        }
+      } catch (secondError) {
+        console.warn(`[DEBUG] Error in second fetch attempt:`, secondError);
+      }
+    }
+    
+    // If both attempts fail and mock data is allowed, use it
+    if (useMock) {
+      console.warn(`[DEBUG] Using mock data for ${endpoint} as fallback`);
+      return getMockData(cleanEndpoint, data) as T;
+    }
+    
+    throw new Error(`Failed to fetch data from ${endpoint}`);
   } catch (error) {
-    console.warn(`Error fetching ${endpoint}, ${useMock ? 'using mock data' : 'throwing error'}:`, error);
+    console.error(`[DEBUG] Final error in fetchWithFallback:`, error);
     
     if (useMock) {
-      console.info(`Using mock data for ${endpoint}`);
+      console.warn(`[DEBUG] Using mock data after error`);
       const cleanEndpoint = endpoint.includes(':') ? endpoint.split(':')[1] : endpoint;
       return getMockData(cleanEndpoint, data) as T;
     }

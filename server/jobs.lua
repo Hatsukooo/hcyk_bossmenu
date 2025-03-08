@@ -477,25 +477,57 @@ lib.callback.register('hcyk_bossactions:getEmployeesPlaytime', function(source, 
     return result
 end)
 
+lib.callback.register('hcyk_bossactions:getJobSettings', function(source, job)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
+        print("[HCYK_BOSSACTIONS] Permission denied for getJobSettings", source, job)
+        return {success = false, message = "Nemáš oprávnění"}
+    end
+    
+    local jobLabel = job
+    local labelQuery = MySQL.Sync.fetchScalar("SELECT label FROM jobs WHERE name = ?", {job})
+    if labelQuery then
+        jobLabel = labelQuery
+    end
+    
+    -- Get job settings
+    local description = ""
+    local settingsQuery = MySQL.Sync.fetchAll("SELECT description FROM jobs_settings WHERE job_name = ?", {job})
+    
+    if settingsQuery and #settingsQuery > 0 and settingsQuery[1].description then
+        description = settingsQuery[1].description
+    end
+    
+    -- Return the job settings
+    local result = {
+        success = true, 
+        label = jobLabel,
+        settings = {
+            description = description
+        }
+    }
+    
+    print("[HCYK_BOSSACTIONS] Returning job settings: " .. json.encode(result))
+    return result
+end)
+
 lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job, data)
     local xPlayer = ESX.GetPlayerFromId(source)
     if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
-        print("Authorization failed for:", source, job)
+        print("[HCYK_BOSSACTIONS] Authorization failed for:", source, job)
         return {success = false, message = "Nemáš oprávnění"}
     end
    
-    print("Updating job settings for", job, "with data:", json.encode(data))
+    print("[HCYK_BOSSACTIONS] Updating job settings for", job, "with data:", json.encode(data))
    
-    -- Handle job label update
     if data.label and data.label ~= '' then
-        local success = false
-        local querySuccess, error = pcall(function()
-            success = MySQL.Sync.execute('UPDATE `jobs` SET label = ? WHERE name = ?', {data.label, job})
+        local labelSuccess, labelError = pcall(function()
+            return MySQL.Sync.execute('UPDATE `jobs` SET label = ? WHERE name = ?', {data.label, job})
         end)
        
-        print("Job label update result:", querySuccess, success, error)
+        print("[HCYK_BOSSACTIONS] Job label update result:", labelSuccess, labelError)
         
-        if querySuccess and success then
+        if labelSuccess then
             local players = ESX.GetPlayers()
             for _, playerId in ipairs(players) do
                 local targetPlayer = ESX.GetPlayerFromId(playerId)
@@ -504,7 +536,7 @@ lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job
                 end
             end
            
-            if not data.settings then  -- Only return if we're not also updating settings
+            if not data.settings then
                 return {success = true, message = "Název frakce byl úspěšně změněn"}
             end
         else
@@ -512,94 +544,27 @@ lib.callback.register('hcyk_bossactions:updateJobSettings', function(source, job
         end
     end
    
-    -- Handle settings update
     if data.settings then
         local settings = data.settings
-        print("Updating settings:", json.encode(settings))
+        print("[HCYK_BOSSACTIONS] Updating settings:", json.encode(settings))
         
-        -- First, check if the table exists
-        local tableExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'jobs_settings'")
-        print("Table exists check:", tableExists)
-        
-        -- Create table if it doesn't exist
-        if tableExists == 0 then
-            print("Table doesn't exist, creating it now")
-            local createSuccess, createError = pcall(function()
-                MySQL.Sync.execute([[
-                    CREATE TABLE IF NOT EXISTS `jobs_settings` (
-                      `id` int(11) NOT NULL AUTO_INCREMENT,
-                      `job_name` varchar(50) NOT NULL,
-                      `description` text DEFAULT NULL,
-                      `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-                      PRIMARY KEY (`id`),
-                      UNIQUE KEY `job_name` (`job_name`)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                ]])
-            end)
-            print("Table creation result:", createSuccess, createError)
+        local description = ""
+        if settings.description ~= nil then
+            description = settings.description
         end
+
+        local querySuccess, queryError = pcall(function()
+            return MySQL.Sync.execute(
+                "INSERT INTO jobs_settings (job_name, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE description = ?, updated_at = CURRENT_TIMESTAMP",
+                {job, description, description}
+            )
+        end)
         
-        -- Now check if an entry exists for this job
-        local existingSettings, queryError = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM jobs_settings WHERE job_name = ?", {job})
-        print("Existing settings check:", existingSettings, queryError)
-        
-        if existingSettings and existingSettings > 0 then
-            local updateSuccess, updateError = pcall(function() 
-                MySQL.Sync.execute(
-                    "UPDATE jobs_settings SET description = ?, updated_at = CURRENT_TIMESTAMP WHERE job_name = ?",
-                    {settings.description, job}
-                )
-            end)
-            print("Update settings result:", updateSuccess, updateError)
-        else
-            local insertSuccess, insertError = pcall(function()
-                MySQL.Sync.execute(
-                    "INSERT INTO jobs_settings (job_name, description) VALUES (?, ?)",
-                    {job, settings.description}
-                )
-            end)
-            print("Insert settings result:", insertSuccess, insertError)
+        if not querySuccess then
+            print("[HCYK_BOSSACTIONS] Database error:", queryError)
+            return {success = false, message = "Databázová chyba při ukládání nastavení"}
         end
     end
    
     return {success = true, message = "Nastavení frakce bylo úspěšně uloženo"}
-end)
-
-lib.callback.register('hcyk_bossactions:getJobSettings', function(source, job)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or xPlayer.getJob().name ~= job or not lib.table.contains(Config.AllowedGrades, xPlayer.getJob().grade_name) then
-        return {success = false, message = "Nemáš oprávnění"}
-    end
-    
-    print("Fetching job settings for", job)
-    
-    local tableExists = MySQL.Sync.fetchScalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'jobs_settings'")
-    if tableExists == 0 then
-        print("jobs_settings table doesn't exist yet")
-        return {success = true, settings = {description = ""}}
-    end
-    
-    local jobLabel = MySQL.Sync.fetchScalar("SELECT label FROM jobs WHERE name = ?", {job})
-    
-    local jobSettings = MySQL.Sync.fetchAll("SELECT * FROM jobs_settings WHERE job_name = ?", {job})
-    
-    if jobSettings and #jobSettings > 0 then
-        print("Found settings for job:", job)
-        return {
-            success = true, 
-            label = jobLabel,
-            settings = {
-                description = jobSettings[1].description or "",
-            }
-        }
-    else
-        print("No settings found for job:", job)
-        return {
-            success = true, 
-            label = jobLabel,
-            settings = {
-                description = "",
-            }
-        }
-    end
 end)
