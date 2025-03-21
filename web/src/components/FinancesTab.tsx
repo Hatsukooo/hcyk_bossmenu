@@ -20,7 +20,6 @@ const FinancesTab: React.FC = () => {
         setError(null);
         
         const job = getFallbackJob();
-        console.log('[DEBUG] Fetching financial data for job:', job, 'timeRange:', timeRange);
         
         // Fetch society money
         const moneyData = await fetchWithFallback<number>(
@@ -29,7 +28,6 @@ const FinancesTab: React.FC = () => {
           true // Use mock data if fetch fails
         );
         
-        console.log('[DEBUG] Society money data received:', moneyData);
         setSocietyMoney(moneyData || 0);
 
         // Fetch financial stats
@@ -46,8 +44,6 @@ const FinancesTab: React.FC = () => {
           true // Use mock data if fetch fails
         );
         
-        console.log('[DEBUG] Financial stats received:', JSON.stringify(statsData));
-        
         if (statsData) {
           setFinanceStats({
             income: Number(statsData.income) || 0,
@@ -55,7 +51,6 @@ const FinancesTab: React.FC = () => {
             netProfit: Number(statsData.netProfit) || 0
           });
         } else {
-          console.error('[DEBUG] Invalid financial stats data received');
           setFinanceStats({
             income: 0,
             expenses: 0,
@@ -63,7 +58,6 @@ const FinancesTab: React.FC = () => {
           });
         }
       } catch (err) {
-        console.error('[DEBUG] Error fetching finances:', err);
         setError('Chyba při načítání financí');
       } finally {
         setLoading(false);

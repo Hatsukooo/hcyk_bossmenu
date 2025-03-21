@@ -44,17 +44,15 @@ const App: React.FC = () => {
       }
       return response.json();
     })
-    .then(data => {
-      console.log("UI hide success:", data);
-    })
     .catch(err => {
-      console.error('Error closing UI:', err);
       setTimeout(() => {
         fetch(`https://hcyk_bossmenu/hideUI`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
-        }).catch(e => console.error('Second attempt failed:', e));
+        }).catch(e => {
+          // Silently fail on second attempt
+        });
       }, 500);
     });
   };
@@ -87,17 +85,12 @@ const App: React.FC = () => {
         setIsMenuOpen(data.data === true);
         
         if (data.job) {
-          console.log('[DEBUG] Received job data in message:', data.job);
-          
           window.latestJobData = typeof data.job === 'string' 
             ? data.job 
             : (data.job.name || data.job.job || String(data.job));
-            
-          console.log('[DEBUG] Stored latestJobData as:', window.latestJobData);
         }
         
         if (data.playerData) {
-          console.log('[DEBUG] Received playerData from setVisible:', data.playerData);
           window.PlayerData = data.playerData;
           
           const refreshEvent = new CustomEvent('jobDataUpdated', { 
@@ -107,11 +100,7 @@ const App: React.FC = () => {
         }
       }
       else if (data.action === 'initData') {
-        console.log('[DEBUG] Received initData action with data:', JSON.stringify(data));
-        
         if (data.playerData) {
-          console.log('[DEBUG] Processing initData playerData:', JSON.stringify(data.playerData));
-          
           window.PlayerData = data.playerData;
           
           if (data.playerData.job) {
@@ -120,12 +109,8 @@ const App: React.FC = () => {
               : data.playerData.job.name || '';
               
             window.latestJobData = jobName;
-            console.log('[DEBUG] Set latestJobData from initData:', jobName);
           }
           
-          console.log('[DEBUG] Dispatching jobDataUpdated event with job:', 
-            data.playerData.job?.name || data.playerData.job);
-            
           const refreshEvent = new CustomEvent('jobDataUpdated', { 
             detail: { job: data.playerData.job?.name || data.playerData.job }
           });

@@ -41,8 +41,6 @@ const FactionManagementTab: React.FC = () => {
         setError(null);
         const job = getFallbackJob();
         
-        console.log('[DEBUG] Fetching job settings for job:', job);
-        
         // First get the job settings
         const jobSettingsResponse = await fetchWithFallback<{
           success: boolean;
@@ -56,8 +54,6 @@ const FactionManagementTab: React.FC = () => {
           true
         );
         
-        console.log('[DEBUG] Job settings response:', JSON.stringify(jobSettingsResponse));
-        
         let description = "";
         let jobLabel = "";
         
@@ -69,10 +65,6 @@ const FactionManagementTab: React.FC = () => {
           if (jobSettingsResponse.label) {
             jobLabel = jobSettingsResponse.label;
           }
-          
-          console.log('[DEBUG] Retrieved settings - description:', description, 'label:', jobLabel);
-        } else {
-          console.log('[DEBUG] Job settings request was not successful or returned unexpected format');
         }
         
         // Then get job data
@@ -87,8 +79,6 @@ const FactionManagementTab: React.FC = () => {
           setLoading(false);
           return;
         }
-        
-        console.log('[DEBUG] Job data response:', JSON.stringify(jobDataResponse));
         
         // Update state
         setJobData(jobDataResponse);
@@ -111,7 +101,6 @@ const FactionManagementTab: React.FC = () => {
           setRanks(ranksData);
         }
       } catch (err) {
-        console.error('[DEBUG] Chyba při načítání dat frakce:', err);
         setError('Chyba při načítání dat frakce');
       } finally {
         setLoading(false);
@@ -208,7 +197,6 @@ const FactionManagementTab: React.FC = () => {
         showNotification('error', response.message || 'Nepodařilo se upravit hodnost');
       }
     } catch (err) {
-      console.error('[DEBUG] Chyba při úpravě hodnosti:', err);
       showNotification('error', 'Nastala chyba při úpravě hodnosti');
     }
   };
@@ -234,14 +222,12 @@ const FactionManagementTab: React.FC = () => {
           showNotification('success', 'Hodnost úspěšně vytvořena');
           setShowCreateModal(false);
         } catch (err) {
-          console.error('[DEBUG] Chyba při načítání hodností po vytvoření:', err);
           showNotification('warning', 'Hodnost vytvořena, ale nelze aktualizovat seznam');
         }
       } else {
         showNotification('error', response.message || 'Nepodařilo se vytvořit hodnost');
       }
     } catch (err) {
-      console.error('[DEBUG] Chyba při vytváření hodnosti:', err);
       showNotification('error', 'Nastala chyba při vytváření hodnosti');
     }
   };
@@ -276,7 +262,6 @@ const FactionManagementTab: React.FC = () => {
             showNotification('error', response.message || 'Nepodařilo se smazat hodnost');
           }
         } catch (err) {
-          console.error('[DEBUG] Chyba při mazání hodnosti:', err);
           showNotification('error', 'Nastala chyba při mazání hodnosti');
         }
       }
@@ -287,11 +272,6 @@ const FactionManagementTab: React.FC = () => {
     if (!jobData) return;
     
     try {
-      console.log('[DEBUG] Saving faction settings:', {
-        label: jobData.label,
-        settings: factionSettings
-      });
-      
       const response = await fetchWithFallback<{success: boolean; message?: string}>(
         'updateJobSettings', 
         {
@@ -302,8 +282,6 @@ const FactionManagementTab: React.FC = () => {
           }
         }
       );
-      
-      console.log('[DEBUG] Update settings response:', JSON.stringify(response));
       
       if (response.success) {
         showNotification('success', 'Nastavení frakce bylo úspěšně uloženo');
@@ -343,17 +321,14 @@ const FactionManagementTab: React.FC = () => {
                 description: refreshedSettings.settings.description || ""
               });
             }
-            
-            console.log('[DEBUG] Data refreshed after save');
           } catch (refreshError) {
-            console.error('[DEBUG] Chyba při aktualizaci dat frakce:', refreshError);
+            // Silent error handling
           }
         }, 500);
       } else {
         showNotification('error', response.message || 'Nepodařilo se uložit nastavení frakce');
       }
     } catch (err) {
-      console.error('[DEBUG] Chyba při ukládání nastavení frakce:', err);
       showNotification('error', 'Nastala chyba při ukládání nastavení frakce');
     }
   };

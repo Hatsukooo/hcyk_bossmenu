@@ -19,7 +19,6 @@ const FireTab: React.FC = () => {
         setLoading(true);
         
         const jobName = getFallbackJob();
-        console.log("[DEBUG] Fetching employees for job:", jobName);
         
         const data = await fetchWithFallback<RawEmployee[]>(
           'getEmployees', 
@@ -27,18 +26,13 @@ const FireTab: React.FC = () => {
           true // Use mock data if fetch fails
         );
         
-        console.log("[DEBUG] Raw employee data:", JSON.stringify(data));
-        
         if (!data || data.length === 0) {
           setError('Žádní zaměstnanci nenalezeni');
         } else {
-          // Transform backend data to frontend Employee type using our improved converter
           const formattedEmployees = data.map(emp => convertEmployeeData(emp));
-          console.log("[DEBUG] Formatted employees:", JSON.stringify(formattedEmployees));
           setEmployees(formattedEmployees);
         }
       } catch (err) {
-        console.error('[DEBUG] Error fetching employees:', err);
         setError('Chyba při načítání zaměstnanců');
       } finally {
         setLoading(false);
@@ -49,18 +43,13 @@ const FireTab: React.FC = () => {
   }, []);
   
   const openConfirmModal = (employee: Employee) => {
-    console.log('[DEBUG] openConfirmModal called with employee:', JSON.stringify(employee));
-    
     if (!employee) {
-      console.error('[DEBUG] Invalid employee:', employee);
       showNotification('error', 'Chyba: Neplatný zaměstnanec');
       return;
     }
   
     // Convert the employee data to ensure it's in the right format
     const cleanEmployee = convertEmployeeData(employee);
-    
-    console.log('[DEBUG] Opening fire confirmation for employee:', cleanEmployee.name);
     
     setSelectedEmployee(cleanEmployee);
     setSeveranceAmount(Math.round(cleanEmployee.salary / 2));
@@ -77,12 +66,9 @@ const FireTab: React.FC = () => {
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
       if (!employeeId) {
-        console.error('[DEBUG] Invalid employee ID:', selectedEmployee);
         showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
         return;
       }
-      
-      console.log('[DEBUG] Firing employee:', employeeId, 'from job:', jobName);
       
       const result = await fetchWithFallback<{success: boolean; message?: string}>(
         'fireEmployee', 
@@ -105,7 +91,6 @@ const FireTab: React.FC = () => {
         showNotification('error', result.message || 'Nepodařilo se propustit zaměstnance');
       }
     } catch (err) {
-      console.error('[DEBUG] Error firing employee:', err);
       showNotification('error', 'Nastala chyba při propouštění');
     }
   };

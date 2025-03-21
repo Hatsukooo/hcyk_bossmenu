@@ -26,7 +26,7 @@ const HireTab: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [selectedPosition, setSelectedPosition] = useState<string>("");
   const [additionalInfo, setAdditionalInfo] = useState<string>("");
-  const [isHiring, setIsHiring] = useState<boolean>(false); // Add missing state
+  const [isHiring, setIsHiring] = useState<boolean>(false);
   const { showNotification } = useNotification();
 
   const fetchPlayerNotes = async (players: NearbyPlayer[]) => {
@@ -50,7 +50,7 @@ const HireTab: React.FC = () => {
           }));
         }
       } catch (err) {
-        console.error('Error fetching note for player:', player.id, err);
+        // Silent error handling
       }
     }
   };
@@ -87,7 +87,6 @@ const HireTab: React.FC = () => {
           
         setJobGrades(sortedRanks);
       } catch (err) {
-        console.error('Chyba při načítání dat:', err);
         setError('Chyba při komunikaci se serverem');
       } finally {
         setLoading(false);
@@ -125,15 +124,7 @@ const HireTab: React.FC = () => {
         return;
       }
       
-      console.log('[DEBUG] Hiring employee:', playerId, 'for position:', selectedPosition, 'grade:', selectedGrade.grade);
-      
       const job = getFallbackJob();
-      
-      console.log('[DEBUG] Hiring data:', {
-        player: playerId,
-        job: job,
-        position: selectedGrade.grade
-      });
       
       const result = await fetchWithFallback<{success: boolean; message?: string}>(
         'hireEmployee', 
@@ -145,8 +136,6 @@ const HireTab: React.FC = () => {
         false 
       );
       
-      console.log('[DEBUG] Hire response:', result);
-      
       if (result && result.success) {
         showNotification('success', 'Zaměstnanec byl úspěšně přijat');
         setSelectedPlayer("");
@@ -157,7 +146,6 @@ const HireTab: React.FC = () => {
         showNotification('error', errorMessage);
       }
     } catch (err) {
-      console.error('[DEBUG] Error hiring employee:', err);
       showNotification('error', 'Nastala chyba při přijímání zaměstnance');
     } finally {
       setIsHiring(false);

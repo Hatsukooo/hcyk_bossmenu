@@ -73,19 +73,15 @@ const EmployeesTab: React.FC = () => {
 
       const text = await response.text();
       if (!text || text.trim() === '') {
-        console.warn(`[DEBUG] Empty response from ${endpoint}`);
         return defaultValue;
       }
 
       try {
         return JSON.parse(text) as T;
       } catch (e) {
-        console.error(`[DEBUG] JSON parse error for ${endpoint}:`, e);
-        console.error(`[DEBUG] Attempted to parse:`, text);
         return defaultValue;
       }
     } catch (error) {
-      console.warn(`[DEBUG] Error fetching ${endpoint}:`, error);
       return defaultValue;
     }
   };
@@ -96,18 +92,15 @@ const EmployeesTab: React.FC = () => {
       setError(null);
       
       const job = getFallbackJob();
-      console.log('[DEBUG] fetchEmployees - job name:', job);
       
       if (!job) {
         const maxRetries = 5;
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          console.log(`[DEBUG] No job found, retrying in 500ms (${retryCountRef.current}/${maxRetries})`);
           setTimeout(fetchEmployees, 500);
           return;
         }
         
-        console.error('[DEBUG] Max retries reached, cannot fetch employees');
         setError('Nelze načíst zaměstnance: Chybí název frakce');
         setLoading(false);
         return;
@@ -120,35 +113,37 @@ const EmployeesTab: React.FC = () => {
         job_name: job
       };
       
-      console.log('[DEBUG] Sending employee request with data:', JSON.stringify(requestData));
-      
+      // Fetch employee data first
       const data = await fetchWithFallback<RawEmployee[]>(
         'getEmployees', 
         requestData, 
         true 
       );
-      console.log('[DEBUG] Raw employee data received:', JSON.stringify(data));
      
       if (!data || data.length === 0) {
         setError('Žádní zaměstnanci nenalezeni');
         return;
       }
       
-      const playtimeData = await fetchWithFallback<{[key: string]: number}>(
-        'hcyk_bossactions:getEmployeesPlaytime',
-        { job },
-        true
-      );
+      // Separate fetch for playtime data
+      let playtimeData: Record<string, number> = {};
+      try {
+        playtimeData = await fetchWithFallback<Record<string, number>>(
+          'getEmployeesPlaytime',
+          { job },
+          true
+        );
+      } catch (playtimeError) {
+        // Continue even if playtime fetch fails
+        playtimeData = {};
+      }
       
-      console.log('[DEBUG] Playtime data received:', JSON.stringify(playtimeData));
-      
+      // Convert and combine employee data
       const formattedEmployees = data.map(emp => {
-        console.log('[DEBUG] Converting employee:', JSON.stringify(emp));
         const convertedEmp = convertEmployeeData(emp);
         const identifier = safelyExtractEmployeeId(emp);
-        console.log('[DEBUG] Extracted identifier:', identifier);
-        const weeklyPlaytime = playtimeData && identifier && playtimeData[String(identifier)] 
-          ? playtimeData[String(identifier)] 
+        const weeklyPlaytime = identifier && playtimeData && typeof playtimeData[String(identifier)] === 'number'
+          ? playtimeData[String(identifier)]
           : 0;
         
         return {
@@ -157,10 +152,8 @@ const EmployeesTab: React.FC = () => {
         };
       });
       
-      console.log('[DEBUG] Formatted employees:', JSON.stringify(formattedEmployees));
       setEmployees(formattedEmployees);
     } catch (err) {
-      console.error('[DEBUG] Error fetching employees:', err);
       setError('Chyba při načítání zaměstnanců');
     } finally {
       setLoading(false);
@@ -169,11 +162,7 @@ const EmployeesTab: React.FC = () => {
 
   useEffect(() => {
     const handleJobUpdate = (event: CustomEvent) => {
-      console.log('[DEBUG] jobDataUpdated event received with detail:', 
-        event.detail ? JSON.stringify(event.detail) : 'no detail');
-        
       if (event.detail?.job) {
-        console.log('[DEBUG] Triggering employee fetch with job:', event.detail.job);
         fetchEmployees();
       }
     };
@@ -182,7 +171,6 @@ const EmployeesTab: React.FC = () => {
     
     const existingJob = getFallbackJob();
     if (existingJob) {
-      console.log('[DEBUG] Found existing job data on component mount:', existingJob);
       fetchEmployees();
     }
     
@@ -197,8 +185,6 @@ const EmployeesTab: React.FC = () => {
     const fetchJobGrades = async () => {
       try {
         const job = getFallbackJob();
-        console.log('[DEBUG] Fetching job grades for job:', job);
-        
         const gradesData = await fetchWithFallback<any[]>(
           'getRanks', 
           { job },
@@ -206,47 +192,28 @@ const EmployeesTab: React.FC = () => {
         );
         
         if (gradesData && gradesData.length > 0) {
-          console.log('[DEBUG] Retrieved job grades:', gradesData);
           setAllJobGrades(gradesData);
-        } else {
-          console.log('[DEBUG] No job grades found');
         }
       } catch (err) {
-        console.error('[DEBUG] Error fetching job grades:', err);
+        // Silently handle error
       }
     };
     
     fetchJobGrades();
   }, [employees]);
-  
-  // Debug logging for roles
-  useEffect(() => {
-    console.log('[DEBUG] Available roles for filtering:', uniqueRoles);
-    console.log('[DEBUG] All employees with roles:', employees.map(e => ({
-      name: e.name, 
-      role: e.role,
-      raw_id: e.id,
-      level: e.level
-    })));
-  }, [employees, uniqueRoles]);
 
   // Update form data when selected employee changes
   useEffect(() => {
     if (selectedEmployee) {
-      console.log('[DEBUG] Selected employee in useEffect:', JSON.stringify(selectedEmployee));
-      
       const employeeId = safelyExtractEmployeeId(selectedEmployee);
       
       if (!employeeId) {
-        console.error("[DEBUG] Invalid employee ID:", JSON.stringify(selectedEmployee));
         return;
       }
       
       const employeeIdString = String(employeeId);
       const job = getFallbackJob();
       const noteKey = `${employeeIdString}_${job}`;
-      
-      console.log("[DEBUG] Selected employee ID after processing:", employeeIdString, "job:", job);
       
       setFormData(prevData => {
         if (prevData.role !== selectedEmployee.role || 
@@ -262,14 +229,10 @@ const EmployeesTab: React.FC = () => {
       });
       
       if (employeeNotes[noteKey] === undefined) {
-        console.log('[DEBUG] Note not found in state, fetching note for:', employeeIdString);
         fetchEmployeeNote(employeeIdString);
-      } else {
-        console.log('[DEBUG] Using cached note for employee:', employeeIdString, 'job:', job);
       }
     }
   }, [selectedEmployee]);
-  
   
   useEffect(() => {
     if (selectedEmployee) {
@@ -300,9 +263,7 @@ const EmployeesTab: React.FC = () => {
     pendingNoteRequests.current.push(employeeId);
     
     try {
-      console.log('[DEBUG] Fetching employee note for:', employeeId);
       const job = getFallbackJob();
-      
       const noteKey = `${employeeId}_${job}`;
       
       const response = await safelyFetchData<{success: boolean; note: string}>(
@@ -314,14 +275,12 @@ const EmployeesTab: React.FC = () => {
         { success: true, note: '' } 
       );
       
-      console.log('[DEBUG] Employee note response:', JSON.stringify(response));
-      
       setEmployeeNotes(prev => ({
         ...prev,
         [noteKey]: response.note || ''
       }));
     } catch (err) {
-      console.error('[DEBUG] Error fetching employee note:', err);
+      // Silently handle error
     } finally {
       pendingNoteRequests.current = pendingNoteRequests.current.filter(id => id !== employeeId);
     }
@@ -484,36 +443,28 @@ const EmployeesTab: React.FC = () => {
         setFormChanged(false);
       }
     } catch (err) {
-      console.error('[DEBUG] Error saving changes:', err);
       showNotification('error', 'Nastala chyba při ukládání změn');
     }
   };
   
   const handleOpenDetail = (employee: Employee) => {
-    console.log('[DEBUG] handleOpenDetail called with employee:', JSON.stringify(employee));
-    
     if (!employee) {
-      console.error('[DEBUG] Invalid employee data (null or undefined)');
       return;
     }
     
     try {
       const cleanEmployee = convertEmployeeData(employee);
-      console.log('[DEBUG] Converted employee:', JSON.stringify(cleanEmployee));
-      
       const employeeId = safelyExtractEmployeeId(cleanEmployee);
+      
       if (!employeeId) {
-        console.error('[DEBUG] Failed to extract valid employee ID');
         showNotification('error', 'Chyba: Neplatný identifikátor zaměstnance');
         return;
       }
       
-      console.log('[DEBUG] Opening detail for employee ID:', employeeId);
       setSelectedEmployee(cleanEmployee);
       setActiveTab("historie");
       setShowDetailModal(true);
     } catch (err) {
-      console.error('[DEBUG] Error in handleOpenDetail:', err);
       showNotification('error', 'Nastala chyba při otevírání detailu');
     }
   };
@@ -555,7 +506,6 @@ const EmployeesTab: React.FC = () => {
       <div className="employees-list">
         {filteredEmployees.map(emp => {
           const empId = safelyExtractEmployeeId(emp);
-          console.log('[DEBUG] Rendering employee card with ID:', empId);
           
           return (
             <div key={String(empId || Math.random())} className="employee-card">
@@ -571,10 +521,7 @@ const EmployeesTab: React.FC = () => {
               </div>
               <div className="employee-actions">
                 <button 
-                  onClick={() => {
-                    console.log('[DEBUG] Edit button clicked for employee:', JSON.stringify(emp));
-                    handleOpenDetail(emp);
-                  }} 
+                  onClick={() => handleOpenDetail(emp)} 
                   className="action-btn"
                 >
                   Upravit
